@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TurboMesh | Project Documentation</title>
+    <!-- Stylish Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.5);
+            --card-bg: #1e293b;
+            --border: #334155;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 0;
+            background: -webkit-linear-gradient(#60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: #e2e8f0;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            color: #bae6fd;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px var(--accent-glow);
+            border-color: var(--accent);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 8px;
+            margin-bottom: 10px;
+        }
+
+        .badge-blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid #3b82f6; }
+        .badge-green { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
+        .badge-purple { background: rgba(167, 139, 250, 0.2); color: #c084fc; border: 1px solid #a78bfa; }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: #000;
+            color: #34d399;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .architecture-box {
+            background: var(--card-bg);
+            border: 1px dashed var(--border);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            color: #94a3b8;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        ul {
+            color: var(--text-muted);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>TurboMesh</h1>
+    <p style="font-size: 1.2rem; color: #cbd5e1; max-width: 600px; margin: 20px auto 0;">
+        A high-performance, cross-platform distributed architecture for remote AI/GPU processing over Local Area Networks (LAN).
+    </p>
+</header>
+
+<div class="container">
+
+    <!-- OVERVIEW SECTION -->
+    <h2>1. Executive Overview</h2>
+    <p>
+        TurboMesh is designed to solve a specific problem: bridging lightweight user devices (like MacBooks) with heavy-duty processing machines (like Windows GPU desktops) seamlessly over a local network. 
+        It offloads complex Machine Learning tasks (like Object Detection and Image Similarity) to the Host, transferring heavy files in optimized, hash-verified chunks, and streaming real-time status updates via WebSockets.
+    </p>
+
+    <!-- ARCHITECTURE -->
+    <h2>2. System Architecture</h2>
+    <div class="architecture-box">
+        [ USER NODE (Mac/PC) ]  <======== LAN / Wi-Fi ========>  [ HOST NODE (GPU Server) ]<br><br>
+        1. Request Pairing   -------- (HTTP POST) --------> Generates 6-digit Code<br>
+        2. Wait for Approval <------- (WebSocket/Poll) ---- User Clicks "Allow" on Host<br>
+        3. Upload File Chunks ------- (1MB TCP Chunks) ---> Reconstructs & SHA-256 Validates<br>
+        4. Receive Progress  <------- (WebSocket ws://) --- Background GPU Inference Queue<br>
+        5. Download Results  <------- (HTTP GET) ---------> Returns JSON Analytics & Images
+    </div>
+
+    <!-- CORE COMPONENTS -->
+    <h2>3. Component Breakdown</h2>
+    <div class="grid">
+        <div class="card">
+            <span class="badge badge-blue">Frontend</span>
+            <h3>User UI (Browser)</h3>
+            <p>Built with lightweight HTML/JS. It handles client-side file chunking via the HTML5 File API and calculates incremental SHA-256 hashes using <code>js-sha256</code> to prevent massive RAM spikes before data even hits the network.</p>
+        </div>
+        <div class="card">
+            <span class="badge badge-purple">Backend</span>
+            <h3>FastAPI Core</h3>
+            <p>Both Host and User nodes run on <code>uvicorn</code> and <code>FastAPI</code>. The API is strictly typed using <code>Pydantic</code> models, ensuring robust data validation for cross-platform network payloads.</p>
+        </div>
+        <div class="card">
+            <span class="badge badge-green">Security</span>
+            <h3>Auth Manager</h3>
+            <p>LAN environments are inherently untrusted. TurboMesh uses a strict pairing flow: temporary 6-digit codes and physical Host-side approval. Approved devices are issued secure JWT-style access tokens for route protection.</p>
+        </div>
+        <div class="card">
+            <span class="badge badge-blue">Data</span>
+            <h3>Job & Storage Manager</h3>
+            <p>Ensures 100% data isolation. Every request generates a unique <code>job_id</code>. Files are reconstructed from chunks in a <code>/temporary</code> folder, verified against the client's SHA-256 hash, and moved to <code>/input</code>.</p>
+        </div>
+        <div class="card">
+            <span class="badge badge-purple">Hardware</span>
+            <h3>Dynamic Device Detection</h3>
+            <p>The Host automatically scans the system using PyTorch to detect the optimal compute backend, gracefully falling back from <strong>CUDA</strong> (NVIDIA) to <strong>MPS</strong> (Apple Silicon) to <strong>CPU</strong>.</p>
+        </div>
+        <div class="card">
+            <span class="badge badge-green">ML Pipeline</span>
+            <h3>Asynchronous Workers</h3>
+            <p>ML workloads block the event loop. TurboMesh executes YOLOv8 and ResNet inference in dedicated background threads (<code>asyncio.to_thread</code>), allowing the API to continue serving WebSocket progress updates simultaneously.</p>
+        </div>
+    </div>
+
+    <!-- AI FEATURES -->
+    <h2>4. Artificial Intelligence Capabilities</h2>
+    <p>The Host node comes pre-equipped with two powerful Computer Vision pipelines:</p>
+    <ul>
+        <li><strong>Object Detection & Analytics:</strong> Utilizes <code>YOLOv8</code> to detect vehicles and objects. It includes a custom HSV algorithm for vehicle color estimation, a heuristic spatial algorithm for license plate privacy blurring, and outputs comprehensive JSON analytics alongside the annotated image.</li>
+        <li><strong>Deep Image Similarity:</strong> Designed for duplicate detection. It combines three algorithms: <strong>SSIM</strong> (Structural Similarity), <strong>pHash</strong> (Perceptual Hashing), and deep feature extraction using <strong>ResNet-18 embeddings</strong> (Cosine Similarity) to output a weighted <code>HIGHLY_SIMILAR</code>, <code>SIMILAR</code>, or <code>DIFFERENT</code> classification.</li>
+    </ul>
+
+    <!-- NETWORKING CONSIDERATIONS -->
+    <h2>5. Network & Deployment Rules</h2>
+    <div class="card" style="border-color: var(--warning);">
+        <h3 style="color: var(--warning);">Critical LAN Constraints</h3>
+        <p>Because TurboMesh operates over a local network without a centralized cloud relay, the following rules apply:</p>
+        <ul>
+            <li><strong>Firewalls:</strong> Windows Defender (or macOS Firewalls) will block port <code>8000</code> by default. Inbound TCP rules must be added, or the network profile must be set to "Private".</li>
+            <li><strong>Mobile Hotspots:</strong> iOS Personal Hotspots strictly enforce <em>Client Isolation (AP Isolation)</em>, preventing connected devices from communicating. Standard Wi-Fi routers, Ethernet cables, or unrestricted Android hotspots must be used.</li>
+            <li><strong>0.0.0.0 Binding:</strong> The Host binds to <code>0.0.0.0</code> to listen to all network interfaces, but clients must navigate to the specific LAN IP (e.g., <code>192.168.1.15</code>) or <code>localhost</code> (if testing locally).</li>
+        </ul>
+    </div>
+
+    <div style="text-align: center; margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: #64748b;">
+        <p>TurboMesh Documentation &bull; Generated for the Development Team</p>
+    </div>
+
+</div>
+
+</body>
+</html>
