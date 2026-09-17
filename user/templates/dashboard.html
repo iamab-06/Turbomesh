@@ -3,69 +3,240 @@
 <head>
     <title>TurboMesh User</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; background: #121212; color: #eee; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        h1, h2, h3 { color: #fff; margin-top: 0; }
-        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }
+        :root {
+            --bg-color: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --card-bg: #1e293b;
+            --input-bg: #0f172a;
+            --border: #334155;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.3);
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            max-width: 900px; 
+            margin: 40px auto; 
+            background: var(--bg-color); 
+            color: var(--text-main); 
+            line-height: 1.6;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 40px;
+            background: -webkit-linear-gradient(#60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        h2 { 
+            font-size: 1.4rem;
+            color: var(--text-main); 
+            margin-top: 0; 
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+        
+        h3 { color: #bae6fd; margin-bottom: 10px; margin-top: 20px;}
+        h4 { color: var(--text-muted); margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;}
+
+        .card { 
+            background: var(--card-bg); 
+            padding: 24px; 
+            border-radius: 12px; 
+            margin-bottom: 24px; 
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: border-color 0.3s ease;
+        }
+
+        .card:hover { border-color: #475569; }
+
+        .info-row { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 12px 0; 
+            border-bottom: 1px dashed var(--border); 
+        }
         .info-row:last-child { border-bottom: none; }
-        .label { color: #aaa; }
-        .value { font-weight: bold; color: #4ade80; }
-        input, select { background: #333; color: white; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
-        button { background: #3b82f6; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-top:10px; }
-        button:disabled { background: #555; cursor: not-allowed; }
-        #status-box, #job-status-box { text-align: center; font-weight: bold; padding: 10px; margin-top: 10px; border-radius: 4px; display: none; }
-        .status-pending { background: #ca8a04; }
-        .status-approved, .status-success { background: #166534; }
-        .status-rejected, .status-error { background: #991b1b; }
-        .progress-bar { width: 100%; background: #333; border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; }
-        .progress-fill { height: 10px; background: #4ade80; width: 0%; transition: width 0.3s; }
-        #results-area { margin-top: 20px; padding: 10px; background: #222; border-radius: 4px; display: none; }
-        #result-img { max-width: 100%; border-radius: 4px; margin-top: 10px; }
-        pre { background: #111; padding: 10px; overflow-x: auto; border-radius: 4px; color: #4ade80; }
+        
+        .label { color: var(--text-muted); font-weight: 600; font-size: 0.95rem; display: block; margin-bottom: 8px;}
+        .info-row .label { margin-bottom: 0; }
+        .value { font-weight: 700; color: var(--success); font-family: 'JetBrains Mono', monospace;}
+
+        input, select { 
+            background: var(--input-bg); 
+            color: var(--text-main); 
+            border: 1px solid var(--border); 
+            padding: 12px; 
+            border-radius: 6px; 
+            width: 100%; 
+            margin-bottom: 20px; 
+            box-sizing: border-box; 
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        button { 
+            background: var(--accent); 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            width: 100%; 
+            font-weight: 600; 
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px var(--accent-glow);
+        }
+        
+        button:hover:not(:disabled) { background: #2563eb; transform: translateY(-1px); }
+        button:disabled { background: var(--border); box-shadow: none; cursor: not-allowed; color: var(--text-muted); }
+
+        #status-box, #job-status-box { 
+            text-align: center; 
+            font-weight: 600; 
+            padding: 12px; 
+            margin-top: 20px; 
+            border-radius: 6px; 
+            display: none; 
+            border: 1px solid transparent;
+        }
+        
+        .status-pending { background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: rgba(245, 158, 11, 0.3) !important; }
+        .status-approved, .status-success { background: rgba(16, 185, 129, 0.1); color: var(--success); border-color: rgba(16, 185, 129, 0.3) !important; }
+        .status-rejected, .status-error { background: rgba(239, 68, 68, 0.1); color: var(--danger); border-color: rgba(239, 68, 68, 0.3) !important; }
+
+        .progress-bar { 
+            width: 100%; 
+            background: var(--input-bg); 
+            border-radius: 6px; 
+            overflow: hidden; 
+            margin-top: 15px; 
+            display: none; 
+            border: 1px solid var(--border);
+            height: 12px;
+        }
+        
+        .progress-fill { 
+            height: 100%; 
+            background: linear-gradient(90deg, #3b82f6, #60a5fa); 
+            width: 0%; 
+            transition: width 0.3s ease-out; 
+            border-radius: 6px;
+        }
+
+        #process-fill { background: linear-gradient(90deg, #10b981, #34d399); }
+
+        #results-area { 
+            margin-top: 30px; 
+            padding: 24px; 
+            background: rgba(15, 23, 42, 0.4); 
+            border-radius: 8px; 
+            display: none; 
+            border: 1px dashed var(--border);
+        }
+        
+        #result-img { 
+            max-width: 100%; 
+            border-radius: 8px; 
+            margin-top: 10px; 
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        pre { 
+            background: #000; 
+            padding: 16px; 
+            overflow-x: auto; 
+            border-radius: 8px; 
+            color: #34d399; 
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--border);
+        }
+
+        input[type="file"]::file-selector-button {
+            background: var(--border);
+            color: var(--text-main);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            margin-right: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+        input[type="file"]::file-selector-button:hover { background: #475569; }
     </style>
 </head>
 <body>
     <h1>TurboMesh User</h1>
     
     <div class='card' id='connection-card'>
-        <h2>Connect to TurboMesh Host</h2>
-        <label class="label">Host IP:</label>
-        <input type="text" id="host_ip" placeholder="192.168.1.x" />
+        <h2>Connect to Host</h2>
         
-        <label class="label">Port:</label>
+        <label class="label">Host IP Address</label>
+        <input type="text" id="host_ip" placeholder="e.g. 192.168.1.50" />
+        
+        <label class="label">Port</label>
         <input type="number" id="port" value="8000" />
         
-        <label class="label">Pairing Code:</label>
-        <input type="text" id="pairing_code" placeholder="123456" />
+        <label class="label">Pairing Code</label>
+        <input type="text" id="pairing_code" placeholder="Enter 6-digit code from Host" />
         
-        <button onclick="connect()">CONNECT</button>
+        <button onclick="connect()">Connect to Host</button>
         <div id="status-box"></div>
     </div>
     
     <div class='card' id='dashboard-card' style="display:none;">
-        <h2>Connection Info</h2>
+        <h2>Active Connection</h2>
         <div class='info-row'><span class='label'>Status:</span><span class='value'>Authenticated</span></div>
-        <div class='info-row'><span class='label'>Host IP:</span><span class='value' id='host-ip-val'></span></div>
+        <div class='info-row'><span class='label'>Host Node IP:</span><span class='value' id='host-ip-val'></span></div>
         
-        <h2 style="margin-top:20px;">Create Job</h2>
-        <label class="label">Operation:</label>
+        <h2 style="margin-top:30px;">Dispatch Job</h2>
+        <label class="label">AI Operation Target</label>
         <select id="operation" onchange="updateFileInputs()">
-            <option value="object_detection">Object Detection & Image Analytics (1 image)</option>
-            <option value="image_similarity">Image Similarity / Duplicate Detection (2 images)</option>
+            <option value="object_detection">Object Detection & Analytics (YOLOv8 - 1 Image)</option>
+            <option value="image_similarity">Deep Image Similarity (ResNet/SSIM - 2 Images)</option>
         </select>
         
         <div id="file-inputs">
+            <label class="label">Select Image File</label>
             <input type="file" id="file1" accept="image/*" />
         </div>
         
-        <button id="start-job-btn" onclick="startJob()">CREATE JOB & UPLOAD</button>
+        <button id="start-job-btn" onclick="startJob()">Create Job & Upload Data</button>
         <div id="job-status-box"></div>
+        
         <div class="progress-bar" id="upload-progress"><div class="progress-fill" id="upload-fill"></div></div>
         <div class="progress-bar" id="process-progress"><div class="progress-fill" id="process-fill"></div></div>
         
         <div id="results-area">
-            <h3>Results</h3>
+            <h3>Processing Results</h3>
             <div id="result-content"></div>
         </div>
     </div>
@@ -79,9 +250,9 @@
             const op = document.getElementById('operation').value;
             const container = document.getElementById('file-inputs');
             if (op === 'object_detection') {
-                container.innerHTML = '<input type="file" id="file1" accept="image/*" />';
+                container.innerHTML = '<label class="label">Select Image File</label><input type="file" id="file1" accept="image/*" />';
             } else {
-                container.innerHTML = '<input type="file" id="file1" accept="image/*" /><input type="file" id="file2" accept="image/*" />';
+                container.innerHTML = '<label class="label">Select Image 1</label><input type="file" id="file1" accept="image/*" /><label class="label">Select Image 2</label><input type="file" id="file2" accept="image/*" />';
             }
         }
 
@@ -93,7 +264,7 @@
             const sb = document.getElementById('status-box');
             sb.style.display = 'block';
             sb.className = 'status-pending';
-            sb.innerText = 'Connecting...';
+            sb.innerText = 'Connecting... Waiting for response';
 
             try {
                 const res = await fetch('/api/pair', {
@@ -103,7 +274,7 @@
                 });
                 
                 if (res.ok) {
-                    sb.innerText = 'Waiting for Host approval...';
+                    sb.innerText = 'Pairing requested. Waiting for Host to ALLOW...';
                     pollInterval = setInterval(checkStatus, 2000);
                 } else {
                     const data = await res.json();
@@ -112,7 +283,7 @@
                 }
             } catch (e) {
                 sb.className = 'status-error';
-                sb.innerText = 'Connection failed';
+                sb.innerText = 'Connection failed to User API';
             }
         }
 
@@ -128,19 +299,11 @@
                     if (data.host) {
                         document.getElementById('host-ip-val').innerText = data.host.ip;
                     }
-                    // Fetch token from user backend so we can use WS
-                    const statusRes = await fetch('/api/status');
-                    const d = await statusRes.json();
-                    
-                    // We need the raw token for WS. The backend `status` doesn't expose it directly for security, 
-                    // wait I should expose it from User backend to JS so JS can connect directly to Host WS?
-                    // Yes, we will modify backend to return token.
-                    
                 } else if (data.auth.status === 'rejected') {
                     if (pollInterval) clearInterval(pollInterval);
                     const sb = document.getElementById('status-box');
                     sb.className = 'status-error';
-                    sb.innerText = 'Connection rejected by Host.';
+                    sb.innerText = 'Connection rejected by Host owner.';
                 }
             } catch (e) {}
         }
@@ -202,12 +365,12 @@
             document.getElementById('results-area').style.display = 'none';
             document.getElementById('process-progress').style.display = 'none';
             
-            if (op === 'object_detection' && !file1) { jsb.className = 'status-error'; jsb.innerText = 'Exactly 1 image required.'; return; }
-            if (op === 'image_similarity' && (!file1 || !file2)) { jsb.className = 'status-error'; jsb.innerText = 'Exactly 2 images required.'; return; }
+            if (op === 'object_detection' && !file1) { jsb.className = 'status-error'; jsb.innerText = 'Error: Exactly 1 image required.'; return; }
+            if (op === 'image_similarity' && (!file1 || !file2)) { jsb.className = 'status-error'; jsb.innerText = 'Error: Exactly 2 images required.'; return; }
 
             document.getElementById('start-job-btn').disabled = true;
             jsb.className = 'status-pending';
-            jsb.innerText = 'Creating Job...';
+            jsb.innerText = 'Initializing Job on Host...';
             
             try {
                 const res = await fetch('/api/jobs', {
@@ -218,7 +381,7 @@
                 if (!res.ok) throw new Error('Job creation failed');
                 const job = await res.json();
                 
-                jsb.innerText = 'Uploading files...';
+                jsb.innerText = 'Securely hashing and uploading chunks...';
                 document.getElementById('upload-progress').style.display = 'block';
                 const fill = document.getElementById('upload-fill');
                 fill.style.width = '0%';
@@ -230,7 +393,7 @@
                 }
                 
                 jsb.className = 'status-pending';
-                jsb.innerText = 'Upload Complete! Waiting for processing...';
+                jsb.innerText = 'Upload verified. Awaiting inference stream...';
                 
                 monitorJob(job.job_id);
             } catch (e) {
@@ -243,9 +406,9 @@
         async function monitorJob(jobId) {
             const statusRes = await fetch('/api/status');
             const statusData = await statusRes.json();
-            const token = statusData.raw_token; // need to expose this
+            const token = statusData.raw_token; 
             const hostIp = statusData.host.ip;
-            const hostPort = 8000; // should be dynamic, we'll hardcode for now as host_url isn't parsed
+            const hostPort = 8000; 
             
             const wsUrl = `ws://${hostIp}:8000/ws/jobs/${jobId}?token=${token}`;
             const ws = new WebSocket(wsUrl);
@@ -260,25 +423,21 @@
                     jsb.className = 'status-error'; jsb.innerText = data.error; ws.close(); return;
                 }
                 
-                jsb.innerText = `Status: ${data.status} | Stage: ${data.stage}`;
+                jsb.innerText = `Host Status: ${data.status} | Stage: ${data.stage}`;
                 pfill.style.width = (data.progress || 0) + '%';
                 
                 if (data.status === 'COMPLETED') {
                     jsb.className = 'status-success';
-                    jsb.innerText = 'Processing Complete!';
+                    jsb.innerText = 'AI Inference Complete! Fetching results...';
                     document.getElementById('start-job-btn').disabled = false;
                     await fetchAndDisplayResults(jobId, data.result_files, hostIp, token);
                     ws.close();
                 } else if (data.status === 'FAILED') {
                     jsb.className = 'status-error';
-                    jsb.innerText = `Processing Failed: ${data.stage}`;
+                    jsb.innerText = `Inference Failed: ${data.stage}`;
                     document.getElementById('start-job-btn').disabled = false;
                     ws.close();
                 }
-            };
-            
-            ws.onclose = () => {
-                // If WS closed prematurely, could fallback to REST polling
             };
         }
 
@@ -289,9 +448,6 @@
             content.innerHTML = '';
             
             for (const file of files) {
-                // Fetch file using User backend proxy to bypass CORS/add token header if needed,
-                // OR since token is just in header, we can proxy it through User backend.
-                // Let's proxy through User backend.
                 const url = `/api/jobs/${jobId}/result/${file}`;
                 
                 if (file.endsWith('.json')) {

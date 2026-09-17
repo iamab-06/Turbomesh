@@ -2,18 +2,151 @@
 <html>
 <head>
     <title>TurboMesh Host</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; background: #121212; color: #eee; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        h1, h2, h3 { color: #fff; margin-top: 0; }
-        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }
+        :root {
+            --bg-color: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --card-bg: #1e293b;
+            --border: #334155;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.3);
+            --success: #10b981;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --warning: #f59e0b;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            max-width: 900px; 
+            margin: 40px auto; 
+            background: var(--bg-color); 
+            color: var(--text-main); 
+            line-height: 1.6;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 40px;
+            background: -webkit-linear-gradient(#60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        h2 { 
+            font-size: 1.4rem;
+            color: var(--text-main); 
+            margin-top: 0; 
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .card { 
+            background: var(--card-bg); 
+            padding: 24px; 
+            border-radius: 12px; 
+            margin-bottom: 24px; 
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: border-color 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: #475569;
+        }
+
+        .info-row { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 12px 0; 
+            border-bottom: 1px dashed var(--border); 
+        }
         .info-row:last-child { border-bottom: none; }
-        .label { color: #aaa; }
-        .value { font-weight: bold; color: #4ade80; }
-        .code { font-size: 2em; letter-spacing: 5px; color: #facc15; text-align: center; margin: 20px 0; }
-        button { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
-        button.reject { background: #ef4444; }
-        .client-card { background: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 10px; }
+        
+        .label { color: var(--text-muted); font-weight: 600; font-size: 0.95rem; }
+        .value { font-weight: 700; color: var(--success); font-family: 'JetBrains Mono', monospace;}
+
+        .code-container {
+            background: #000;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .code-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .code { 
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem; 
+            letter-spacing: 8px; 
+            color: var(--warning); 
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+            margin: 0;
+        }
+
+        button { 
+            background: var(--accent); 
+            color: white; 
+            border: none; 
+            padding: 8px 20px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600;
+            font-family: inherit;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px var(--accent-glow);
+        }
+        button:hover { background: #2563eb; transform: translateY(-1px); }
+        button.reject { background: var(--danger); box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3); }
+        button.reject:hover { background: var(--danger-hover); }
+        
+        .client-card { 
+            background: rgba(15, 23, 42, 0.5); 
+            padding: 16px; 
+            border-radius: 8px; 
+            margin-bottom: 12px; 
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .client-info strong {
+            display: block;
+            font-size: 1.1rem;
+            color: var(--text-main);
+        }
+        .client-info span {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .client-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .empty-state {
+            color: var(--text-muted);
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -23,24 +156,31 @@
         <h2>Network & Pairing</h2>
         <div class='info-row'><span class='label'>Host IP:</span><span class='value'>{{ host_ip }}</span></div>
         <div class='info-row'><span class='label'>Port:</span><span class='value'>{{ port }}</span></div>
-        <div class='code' id='pairing-code'>{{ pairing_code }}</div>
+        <div class="code-container">
+            <span class="code-label">Active Pairing Code</span>
+            <div class='code' id='pairing-code'>{{ pairing_code }}</div>
+        </div>
     </div>
     
     <div class='card'>
-        <h2>Hardware</h2>
-        <div class='info-row'><span class='label'>GPU:</span><span class='value'>{{ hardware.gpu }}</span></div>
-        <div class='info-row'><span class='label'>Backend:</span><span class='value'>{{ hardware.backend }}</span></div>
-        <div class='info-row'><span class='label'>Device:</span><span class='value'>{{ hardware.device }}</span></div>
+        <h2>Hardware Status</h2>
+        <div class='info-row'><span class='label'>GPU Detected:</span><span class='value' style="color: {{ '#10b981' if hardware.gpu != 'Not detected' else '#ef4444' }}">{{ hardware.gpu }}</span></div>
+        <div class='info-row'><span class='label'>Compute Backend:</span><span class='value'>{{ hardware.backend }}</span></div>
+        <div class='info-row'><span class='label'>Active Device:</span><span class='value'>{{ hardware.device }}</span></div>
     </div>
 
     <div class='card'>
         <h2>Pending Requests</h2>
-        <div id='pending-list'></div>
+        <div id='pending-list'>
+            <div class="empty-state">Loading...</div>
+        </div>
     </div>
 
     <div class='card'>
         <h2>Approved Devices</h2>
-        <div id='approved-list'></div>
+        <div id='approved-list'>
+            <div class="empty-state">Loading...</div>
+        </div>
     </div>
 
     <script>
@@ -52,27 +192,35 @@
                 const pendingDiv = document.getElementById('pending-list');
                 pendingDiv.innerHTML = '';
                 for (const [clientId, req] of Object.entries(data.pending)) {
-                    pendingDiv.innerHTML += `<div class='client-card'>
-                        <div><strong>${req.info.device_name}</strong> (${req.info.os})</div>
-                        <div style='margin-top:10px;'>
-                            <button onclick='approveClient("${clientId}")'>ALLOW</button>
-                            <button class='reject' onclick='rejectClient("${clientId}")'>REJECT</button>
+                    pendingDiv.innerHTML += `
+                    <div class='client-card'>
+                        <div class='client-info'>
+                            <strong>${req.info.device_name}</strong>
+                            <span>OS: ${req.info.os} | Client ID: ${clientId.substring(0,8)}...</span>
+                        </div>
+                        <div class='client-actions'>
+                            <button onclick='approveClient("${clientId}")'>Allow</button>
+                            <button class='reject' onclick='rejectClient("${clientId}")'>Reject</button>
                         </div>
                     </div>`;
                 }
-                if(Object.keys(data.pending).length === 0) pendingDiv.innerHTML = 'None';
+                if(Object.keys(data.pending).length === 0) pendingDiv.innerHTML = '<div class="empty-state">No pending requests</div>';
 
                 const approvedDiv = document.getElementById('approved-list');
                 approvedDiv.innerHTML = '';
                 for (const [clientId, req] of Object.entries(data.approved)) {
-                    approvedDiv.innerHTML += `<div class='client-card'>
-                        <div><strong>${req.info.device_name}</strong></div>
-                        <div style='margin-top:10px;'>
-                            <button class='reject' onclick='revokeClient("${clientId}")'>REVOKE ACCESS</button>
+                    approvedDiv.innerHTML += `
+                    <div class='client-card'>
+                        <div class='client-info'>
+                            <strong>${req.info.device_name}</strong>
+                            <span>Active Connection</span>
+                        </div>
+                        <div class='client-actions'>
+                            <button class='reject' onclick='revokeClient("${clientId}")'>Revoke Access</button>
                         </div>
                     </div>`;
                 }
-                if(Object.keys(data.approved).length === 0) approvedDiv.innerHTML = 'None';
+                if(Object.keys(data.approved).length === 0) approvedDiv.innerHTML = '<div class="empty-state">No approved devices</div>';
             } catch (e) {}
         }
 
