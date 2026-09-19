@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TurboMesh User</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; background: #121212; color: #eee; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h1, h2, h3 { color: #fff; margin-top: 0; }
+        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }
+        .info-row:last-child { border-bottom: none; }
+        .label { color: #aaa; }
+        .value { font-weight: bold; color: #4ade80; }
+        input, select { background: #333; color: white; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
+        button { background: #3b82f6; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-top:10px; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        #status-box, #job-status-box { text-align: center; font-weight: bold; padding: 10px; margin-top: 10px; border-radius: 4px; display: none; }
+        .status-pending { background: #ca8a04; }
+        .status-approved, .status-success { background: #166534; }
+        .status-rejected, .status-error { background: #991b1b; }
+        .progress-bar { width: 100%; background: #333; border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; }
+        .progress-fill { height: 10px; background: #4ade80; width: 0%; transition: width 0.3s; }
+        #results-area { margin-top: 20px; padding: 10px; background: #222; border-radius: 4px; display: none; }
+        #result-img { max-width: 100%; border-radius: 4px; margin-top: 10px; }
+        pre { background: #111; padding: 10px; overflow-x: auto; border-radius: 4px; color: #4ade80; }
+    </style>
+</head>
+<body>
+    <h1>TurboMesh User</h1>
+    
+    <div class='card' id='connection-card'>
+        <h2>Connect to TurboMesh Host</h2>
+        <label class="label">Host IP:</label>
+        <input type="text" id="host_ip" placeholder="192.168.1.x" />
+        
+        <label class="label">Port:</label>
+        <input type="number" id="port" value="8000" />
+        
+        <label class="label">Pairing Code:</label>
+        <input type="text" id="pairing_code" placeholder="123456" />
+        
+        <button onclick="connect()">CONNECT</button>
+        <div id="status-box"></div>
+    </div>
+    
+    <div class='card' id='dashboard-card' style="display:none;">
+        <h2>Connection Info</h2>
+        <div class='info-row'><span class='label'>Status:</span><span class='value'>Authenticated</span></div>
+        <div class='info-row'><span class='label'>Host IP:</span><span class='value' id='host-ip-val'></span></div>
+        
+        <h2 style="margin-top:20px;">Create Job</h2>
+        <label class="label">Operation:</label>
+        <select id="operation" onchange="updateFileInputs()">
+            <option value="object_detection">Object Detection & Image Analytics (1 image)</option>
+            <option value="image_similarity">Image Similarity / Duplicate Detection (2 images)</option>
+        </select>
+        
+        <div id="file-inputs">
+            <input type="file" id="file1" accept="image/*" />
+        </div>
+        
+        <button id="start-job-btn" onclick="startJob()">CREATE JOB & UPLOAD</button>
+        <div id="job-status-box"></div>
+        <div class="progress-bar" id="upload-progress"><div class="progress-fill" id="upload-fill"></div></div>
+        <div class="progress-bar" id="process-progress"><div class="progress-fill" id="process-fill"></div></div>
+        
+        <div id="results-area">
+            <h3>Results</h3>
+            <div id="result-content"></div>
+        </div>
+    </div>
+
+    <script>
+        let pollInterval;
+        let authToken = null;
+        let hostUrl = null;
+
+        function updateFileInputs() {
+            const op = document.getElementById('operation').value;
+            const container = document.getElementById('file-inputs');
+            if (op === 'object_detection') {
+                container.innerHTML = '<input type="file" id="file1" accept="image/*" />';
+            } else {
+                container.innerHTML = '<input type="file" id="file1" accept="image/*" /><input type="file" id="file2" accept="image/*" />';
+            }
+        }
+
+        async function connect() {
+            const host_ip = document.getElementById('host_ip').value;
+            const port = parseInt(document.getElementById('port').value);
+            const pairing_code = document.getElementById('pairing_code').value;
+            
+            const sb = document.getElementById('status-box');
+            sb.style.display = 'block';
+            sb.className = 'status-pending';
+            sb.innerText = 'Connecting...';
+
+            try {
+                const res = await fetch('/api/pair', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({host_ip, port, pairing_code})
+                });
+                
+                if (res.ok) {
+                    sb.innerText = 'Waiting for Host approval...';
+                    pollInterval = setInterval(checkStatus, 2000);
+                } else {
+                    const data = await res.json();
+                    sb.className = 'status-error';
+                    sb.innerText = 'Error: ' + data.detail;
+                }
+            } catch (e) {
+                sb.className = 'status-error';
+                sb.innerText = 'Connection failed';
+            }
+        }
+
+        async function checkStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                if (data.auth.status === 'approved') {
+                    if (pollInterval) clearInterval(pollInterval);
+                    document.getElementById('connection-card').style.display = 'none';
+                    document.getElementById('dashboard-card').style.display = 'block';
+                    if (data.host) {
+                        document.getElementById('host-ip-val').innerText = data.host.ip;
+                    }
+                    // Fetch token from user backend so we can use WS
+                    const statusRes = await fetch('/api/status');
+                    const d = await statusRes.json();
+                    
+                    // We need the raw token for WS. The backend `status` doesn't expose it directly for security, 
+                    // wait I should expose it from User backend to JS so JS can connect directly to Host WS?
+                    // Yes, we will modify backend to return token.
+                    
+                } else if (data.auth.status === 'rejected') {
+                    if (pollInterval) clearInterval(pollInterval);
+                    const sb = document.getElementById('status-box');
+                    sb.className = 'status-error';
+                    sb.innerText = 'Connection rejected by Host.';
+                }
+            } catch (e) {}
+        }
+        
+        async function calculateSHA256(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                const hasher = sha256.create();
+                const chunkSize = 1024 * 1024;
+                let offset = 0;
+                
+                reader.onload = function(e) {
+                    hasher.update(e.target.result);
+                    offset += chunkSize;
+                    if (offset < file.size) readNext();
+                    else resolve(hasher.hex());
+                };
+                
+                function readNext() {
+                    reader.readAsArrayBuffer(file.slice(offset, offset + chunkSize));
+                }
+                readNext();
+            });
+        }
+
+        async function uploadFile(jobId, file, progressFill) {
+            const hash = await calculateSHA256(file);
+            const chunkSize = 1024 * 1024;
+            const totalChunks = Math.ceil(file.size / chunkSize);
+            
+            for (let i = 0; i < totalChunks; i++) {
+                const chunk = file.slice(i * chunkSize, (i + 1) * chunkSize);
+                const formData = new FormData();
+                formData.append('chunk_index', i);
+                formData.append('filename', file.name);
+                formData.append('file', chunk);
+                
+                const res = await fetch(`/api/jobs/${jobId}/upload/chunk`, { method: 'POST', body: formData });
+                if (!res.ok) throw new Error('Chunk upload failed');
+                
+                progressFill.style.width = ((i + 1) / totalChunks * 100) + '%';
+            }
+            
+            const res = await fetch(`/api/jobs/${jobId}/upload/finalize`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ filename: file.name, total_chunks: totalChunks, expected_size: file.size, expected_sha256: hash })
+            });
+            if (!res.ok) throw new Error('Finalize failed');
+        }
+
+        async function startJob() {
+            const op = document.getElementById('operation').value;
+            const file1 = document.getElementById('file1')?.files[0];
+            const file2 = document.getElementById('file2')?.files[0];
+            
+            const jsb = document.getElementById('job-status-box');
+            jsb.style.display = 'block';
+            document.getElementById('results-area').style.display = 'none';
+            document.getElementById('process-progress').style.display = 'none';
+            
+            if (op === 'object_detection' && !file1) { jsb.className = 'status-error'; jsb.innerText = 'Exactly 1 image required.'; return; }
+            if (op === 'image_similarity' && (!file1 || !file2)) { jsb.className = 'status-error'; jsb.innerText = 'Exactly 2 images required.'; return; }
+
+            document.getElementById('start-job-btn').disabled = true;
+            jsb.className = 'status-pending';
+            jsb.innerText = 'Creating Job...';
+            
+            try {
+                const res = await fetch('/api/jobs', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({operation: op})
+                });
+                if (!res.ok) throw new Error('Job creation failed');
+                const job = await res.json();
+                
+                jsb.innerText = 'Uploading files...';
+                document.getElementById('upload-progress').style.display = 'block';
+                const fill = document.getElementById('upload-fill');
+                fill.style.width = '0%';
+                
+                await uploadFile(job.job_id, file1, fill);
+                if (file2) {
+                    fill.style.width = '0%';
+                    await uploadFile(job.job_id, file2, fill);
+                }
+                
+                jsb.className = 'status-pending';
+                jsb.innerText = 'Upload Complete! Waiting for processing...';
+                
+                monitorJob(job.job_id);
+            } catch (e) {
+                jsb.className = 'status-error';
+                jsb.innerText = 'Error: ' + e.message;
+                document.getElementById('start-job-btn').disabled = false;
+            }
+        }
+
+        async function monitorJob(jobId) {
+            const statusRes = await fetch('/api/status');
+            const statusData = await statusRes.json();
+            const token = statusData.raw_token; // need to expose this
+            const hostIp = statusData.host.ip;
+            const hostPort = 8000; // should be dynamic, we'll hardcode for now as host_url isn't parsed
+            
+            const wsUrl = `ws://${hostIp}:8000/ws/jobs/${jobId}?token=${token}`;
+            const ws = new WebSocket(wsUrl);
+            const jsb = document.getElementById('job-status-box');
+            const pbar = document.getElementById('process-progress');
+            const pfill = document.getElementById('process-fill');
+            pbar.style.display = 'block';
+            
+            ws.onmessage = async (event) => {
+                const data = JSON.parse(event.data);
+                if (data.error) {
+                    jsb.className = 'status-error'; jsb.innerText = data.error; ws.close(); return;
+                }
+                
+                jsb.innerText = `Status: ${data.status} | Stage: ${data.stage}`;
+                pfill.style.width = (data.progress || 0) + '%';
+                
+                if (data.status === 'COMPLETED') {
+                    jsb.className = 'status-success';
+                    jsb.innerText = 'Processing Complete!';
+                    document.getElementById('start-job-btn').disabled = false;
+                    await fetchAndDisplayResults(jobId, data.result_files, hostIp, token);
+                    ws.close();
+                } else if (data.status === 'FAILED') {
+                    jsb.className = 'status-error';
+                    jsb.innerText = `Processing Failed: ${data.stage}`;
+                    document.getElementById('start-job-btn').disabled = false;
+                    ws.close();
+                }
+            };
+            
+            ws.onclose = () => {
+                // If WS closed prematurely, could fallback to REST polling
+            };
+        }
+
+        async function fetchAndDisplayResults(jobId, files, hostIp, token) {
+            const resultsArea = document.getElementById('results-area');
+            const content = document.getElementById('result-content');
+            resultsArea.style.display = 'block';
+            content.innerHTML = '';
+            
+            for (const file of files) {
+                // Fetch file using User backend proxy to bypass CORS/add token header if needed,
+                // OR since token is just in header, we can proxy it through User backend.
+                // Let's proxy through User backend.
+                const url = `/api/jobs/${jobId}/result/${file}`;
+                
+                if (file.endsWith('.json')) {
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    content.innerHTML += `<h4>${file}</h4><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else if (file.match(/\.(jpg|jpeg|png)$/i)) {
+                    content.innerHTML += `<h4>${file}</h4><img id="result-img" src="${url}" />`;
+                }
+            }
+        }
+
+        checkStatus();
+    </script>
+</body>
+</html>

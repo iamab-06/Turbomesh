@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+jinja2
+python-multipart
+websockets
+pydantic
+torch
+torchvision
+opencv-python-headless
+Pillow
+numpy
+ultralytics
+imagehash
+scikit-image
+pytest
+requests
+httpx

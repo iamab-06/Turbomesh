@@ -54,5 +54,3 @@ storage/
 
 # Optional: keep generated job output out of Git
 **/jobs/
-
-user/
