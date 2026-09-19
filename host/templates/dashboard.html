@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TurboMesh Host</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; background: #121212; color: #eee; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h1, h2, h3 { color: #fff; margin-top: 0; }
+        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }
+        .info-row:last-child { border-bottom: none; }
+        .label { color: #aaa; }
+        .value { font-weight: bold; color: #4ade80; }
+        .code { font-size: 2em; letter-spacing: 5px; color: #facc15; text-align: center; margin: 20px 0; }
+        button { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        button.reject { background: #ef4444; }
+        .client-card { background: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>TurboMesh Host</h1>
+    
+    <div class='card'>
+        <h2>Network & Pairing</h2>
+        <div class='info-row'><span class='label'>Host IP:</span><span class='value'>{{ host_ip }}</span></div>
+        <div class='info-row'><span class='label'>Port:</span><span class='value'>{{ port }}</span></div>
+        <div class='code' id='pairing-code'>{{ pairing_code }}</div>
+    </div>
+    
+    <div class='card'>
+        <h2>Hardware</h2>
+        <div class='info-row'><span class='label'>GPU:</span><span class='value'>{{ hardware.gpu }}</span></div>
+        <div class='info-row'><span class='label'>Backend:</span><span class='value'>{{ hardware.backend }}</span></div>
+        <div class='info-row'><span class='label'>Device:</span><span class='value'>{{ hardware.device }}</span></div>
+    </div>
+
+    <div class='card'>
+        <h2>Pending Requests</h2>
+        <div id='pending-list'></div>
+    </div>
+
+    <div class='card'>
+        <h2>Approved Devices</h2>
+        <div id='approved-list'></div>
+    </div>
+
+    <script>
+        async function fetchClients() {
+            try {
+                const res = await fetch('/api/clients');
+                const data = await res.json();
+                
+                const pendingDiv = document.getElementById('pending-list');
+                pendingDiv.innerHTML = '';
+                for (const [clientId, req] of Object.entries(data.pending)) {
+                    pendingDiv.innerHTML += `<div class='client-card'>
+                        <div><strong>${req.info.device_name}</strong> (${req.info.os})</div>
+                        <div style='margin-top:10px;'>
+                            <button onclick='approveClient("${clientId}")'>ALLOW</button>
+                            <button class='reject' onclick='rejectClient("${clientId}")'>REJECT</button>
+                        </div>
+                    </div>`;
+                }
+                if(Object.keys(data.pending).length === 0) pendingDiv.innerHTML = 'None';
+
+                const approvedDiv = document.getElementById('approved-list');
+                approvedDiv.innerHTML = '';
+                for (const [clientId, req] of Object.entries(data.approved)) {
+                    approvedDiv.innerHTML += `<div class='client-card'>
+                        <div><strong>${req.info.device_name}</strong></div>
+                        <div style='margin-top:10px;'>
+                            <button class='reject' onclick='revokeClient("${clientId}")'>REVOKE ACCESS</button>
+                        </div>
+                    </div>`;
+                }
+                if(Object.keys(data.approved).length === 0) approvedDiv.innerHTML = 'None';
+            } catch (e) {}
+        }
+
+        async function approveClient(id) { await fetch('/api/clients/' + id + '/approve', {method: 'POST'}); fetchClients(); }
+        async function rejectClient(id) { await fetch('/api/clients/' + id + '/reject', {method: 'POST'}); fetchClients(); }
+        async function revokeClient(id) { await fetch('/api/clients/' + id + '/revoke', {method: 'POST'}); fetchClients(); }
+
+        setInterval(fetchClients, 2000);
+        fetchClients();
+    </script>
+</body>
+</html>
