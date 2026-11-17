@@ -52,7 +52,12 @@ async def revoke_client(client_id: str): return auth_manager.revoke_client(clien
 async def list_clients(): return {'pending': auth_manager.pending_requests, 'approved': auth_manager.approved_clients}
 
 @app.get('/api/host/info')
-async def get_host_info(): return {'ip': host_ip, 'hardware': hardware_info}
+async def get_host_info():
+    hw = get_hardware_info()
+    # Alert if host is not using GPU for training operations
+    if hw['device'] == 'cpu':
+        hw['warning'] = 'Host is running on CPU. Hand sign training will be very slow. Please run on a machine with CUDA or Apple Silicon GPU.'
+    return {'ip': host_ip, 'hardware': hw}
 
 @app.post('/api/jobs')
 async def create_job(req: JobCreateRequest, client_id: str = Depends(get_current_client)): return job_manager.create_job(client_id, req.operation)
@@ -69,8 +74,16 @@ async def upload_chunk(job_id: str, chunk_index: int = Form(...), filename: str 
 async def finalize_upload(job_id: str, req: FinalizeUploadRequest, background_tasks: BackgroundTasks, client_id: str = Depends(get_current_client)):
     res = job_manager.finalize_upload(job_id, client_id, req.filename, req.total_chunks, req.expected_size, req.expected_sha256)
     job = job_manager.get_job(job_id, client_id)
-    # Check if ready
-    required = 2 if job['operation'] == 'image_similarity' else 1
+    
+    # Check if ready based on operation type
+    required_files = {
+        'object_detection': 1,
+        'image_similarity': 2,
+        'hand_sign_recognition': 1,
+        'hand_sign_detection': 1
+    }
+    required = required_files.get(job['operation'], 1)
+    
     if len(job['files']) == required:
         job['status'] = 'UPLOAD_COMPLETE'
         background_tasks.add_task(process_job, job_id)

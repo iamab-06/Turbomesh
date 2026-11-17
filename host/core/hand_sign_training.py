@@ -310,6 +310,13 @@ def train_hand_sign_model(dataset_dir, job, output_dir):
 def run_hand_sign_recognition(job, input_dir, output_dir):
     """Main handler for hand sign recognition job."""
     
+    # GPU requirement check: Host must use GPU for training efficiency
+    if DEVICE == 'cpu':
+        raise Exception(
+            f'GPU required for hand sign training. Available device: {DEVICE}. '
+            'Host must have CUDA (Windows/Linux) or MPS (Apple Silicon) GPU available.'
+        )
+    
     files = list(job['files'].keys())
     if len(files) != 1:
         raise Exception('Hand Sign Recognition requires exactly 1 dataset file (ZIP)')
