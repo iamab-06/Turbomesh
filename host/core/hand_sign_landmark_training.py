@@ -82,7 +82,7 @@ class LandmarkDataset:
             print("  1. Images contain hand visualizations (red dots/white lines)")
             print("  2. Hands are not clearly visible or in poor lighting")
             print("  3. Hands are partially out of frame or occluded")
-            print("\nTrying fallback: Creating synthetic features from image statistics...")
+            print("\nTrying fallback: Creating features from image statistics...")
             
             # Fallback: create features from image color/texture statistics
             for class_name in sorted(self.class_to_idx.keys()):
@@ -95,27 +95,37 @@ class LandmarkDataset:
                     try:
                         img_path = os.path.join(class_path, img_file)
                         image = Image.open(img_path).convert('RGB')
-                        arr = np.array(image)
+                        arr = np.array(image, dtype=np.float32)
                         
                         # Create 78 features from image statistics
-                        # This is a fallback when landmark detection fails
-                        features = np.array([
-                            np.mean(arr[:,:,0]), np.std(arr[:,:,0]),  # Red channel mean/std
-                            np.mean(arr[:,:,1]), np.std(arr[:,:,1]),  # Green channel mean/std
-                            np.mean(arr[:,:,2]), np.std(arr[:,:,2]),  # Blue channel mean/std
-                            np.percentile(arr, 25), np.percentile(arr, 50), np.percentile(arr, 75),  # Percentiles
-                            arr.shape[0], arr.shape[1],  # Dimensions
-                            # Pad to 78 features
-                            *np.random.randn(78-12)  # Random features (will help model learn color only)
-                        ], dtype=np.float32)
+                        features_list = [
+                            np.mean(arr[:,:,0]), np.std(arr[:,:,0]),  # Red mean/std
+                            np.mean(arr[:,:,1]), np.std(arr[:,:,1]),  # Green mean/std
+                            np.mean(arr[:,:,2]), np.std(arr[:,:,2]),  # Blue mean/std
+                            np.percentile(arr, 10), np.percentile(arr, 25),  
+                            np.percentile(arr, 50), np.percentile(arr, 75),
+                            np.percentile(arr, 90),  # Percentiles
+                            float(arr.shape[0]), float(arr.shape[1]),  # Dimensions
+                        ]
+                        
+                        # Add color histograms (64 more features to reach 78)
+                        for channel in range(3):
+                            hist, _ = np.histogram(arr[:,:,channel], bins=20)
+                            features_list.extend(hist[:20])
+                        
+                        features = np.array(features_list[:78], dtype=np.float32)
+                        if len(features) < 78:
+                            features = np.pad(features, (0, 78 - len(features)), mode='constant')
                         
                         self.features.append(features)
                         self.labels.append(idx)
-                    except:
+                    except Exception as e:
                         pass
             
             if len(self.features) == 0:
-                raise Exception("No valid landmarks extracted and fallback failed!")
+                raise Exception("Fallback failed: Could not create any features from dataset!")
+            
+            print(f"✓ Created {len(self.features)} fallback features (using color/texture histograms)")
         
         X = np.array(self.features, dtype=np.float32)
         y = np.array(self.labels, dtype=np.int32)
