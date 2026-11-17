@@ -6,11 +6,14 @@ Provides consistent feature representation for both training and inference.
 import numpy as np
 import cv2
 from PIL import Image
-import mediapipe as mp
 
-# Initialize MediaPipe Hand Landmarker
-mp_hands = mp.solutions.hands
-mp_drawing = mp.solutions.drawing_utils
+try:
+    import mediapipe as mp
+    from mediapipe.solutions import hands as mp_hands
+except (ImportError, AttributeError):
+    print("⚠ MediaPipe not fully imported. Install with: pip install --no-compile mediapipe")
+    mp = None
+    mp_hands = None
 
 def extract_hand_landmarks(image_input):
     """
@@ -23,6 +26,9 @@ def extract_hand_landmarks(image_input):
         landmarks: numpy array of shape (21, 3) with normalized x, y, z coordinates
         or None if no hand detected
     """
+    if mp_hands is None:
+        raise ImportError("MediaPipe not available. Run: pip install --no-compile mediapipe")
+    
     # Convert to numpy array if PIL Image
     if isinstance(image_input, Image.Image):
         image = np.array(image_input.convert('RGB'))
