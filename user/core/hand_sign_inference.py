@@ -7,11 +7,15 @@ import pickle
 import numpy as np
 import cv2
 from PIL import Image
-import mediapipe as mp
 from typing import Optional, Tuple
 
-# Initialize MediaPipe
-mp_hands = mp.solutions.hands
+try:
+    import mediapipe as mp
+    from mediapipe.solutions import hands as mp_hands
+except ImportError:
+    print("⚠ MediaPipe not fully imported. Install with: pip install --no-compile mediapipe")
+    mp = None
+    mp_hands = None
 
 # Global state for model and hand detector
 _loaded_model = None
@@ -23,6 +27,8 @@ def initialize_hand_detector():
     """Initialize MediaPipe hand detector."""
     global _hand_detector
     if _hand_detector is None:
+        if mp_hands is None:
+            raise ImportError("MediaPipe not available. Run: pip install --no-compile mediapipe")
         _hand_detector = mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=1,
