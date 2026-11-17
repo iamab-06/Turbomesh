@@ -1,46 +1,464 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TurboMesh Host</title>
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; background: #121212; color: #eee; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        h1, h2, h3 { color: #fff; margin-top: 0; }
-        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }
-        .info-row:last-child { border-bottom: none; }
-        .label { color: #aaa; }
-        .value { font-weight: bold; color: #4ade80; }
-        .code { font-size: 2em; letter-spacing: 5px; color: #facc15; text-align: center; margin: 20px 0; }
-        button { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
-        button.reject { background: #ef4444; }
-        .client-card { background: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 10px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark-bg: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --accent: #8b5cf6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 40px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+
+        .header-subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-top: 4px;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: var(--success);
+        }
+
+        .status-indicator::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        /* Info Display */
+        .info-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-bottom: 12px;
+        }
+
+        .info-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 4px;
+            word-break: break-all;
+        }
+
+        /* Pairing Code */
+        .pairing-code-display {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+            border: 1px dashed var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .pairing-code-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .pairing-code {
+            font-size: 2.25rem;
+            font-weight: 700;
+            letter-spacing: 8px;
+            color: var(--primary);
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Hardware Stats */
+        .hardware-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .stat-item {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Client Cards */
+        .clients-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .client-card {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .client-card:hover {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: var(--primary);
+        }
+
+        .client-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .client-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .client-os {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: rgba(148, 163, 184, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .client-info {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 32px 16px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        /* Buttons */
+        button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: var(--danger);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 16px;
+            }
+
+            h1 {
+                font-size: 1.875rem;
+            }
+
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .pairing-code {
+                font-size: 1.875rem;
+                letter-spacing: 6px;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>TurboMesh Host</h1>
-    
-    <div class='card'>
-        <h2>Network & Pairing</h2>
-        <div class='info-row'><span class='label'>Host IP:</span><span class='value'>{{ host_ip }}</span></div>
-        <div class='info-row'><span class='label'>Port:</span><span class='value'>{{ port }}</span></div>
-        <div class='code' id='pairing-code'>{{ pairing_code }}</div>
-    </div>
-    
-    <div class='card'>
-        <h2>Hardware</h2>
-        <div class='info-row'><span class='label'>GPU:</span><span class='value'>{{ hardware.gpu }}</span></div>
-        <div class='info-row'><span class='label'>Backend:</span><span class='value'>{{ hardware.backend }}</span></div>
-        <div class='info-row'><span class='label'>Device:</span><span class='value'>{{ hardware.device }}</span></div>
-    </div>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-content">
+                <div>
+                    <h1>TurboMesh Host</h1>
+                    <p class="header-subtitle">GPU processing server</p>
+                </div>
+                <div class="status-indicator">
+                    Online
+                </div>
+            </div>
+        </header>
 
-    <div class='card'>
-        <h2>Pending Requests</h2>
-        <div id='pending-list'></div>
-    </div>
+        <!-- Quick Stats Grid -->
+        <div class="grid">
+            <!-- Network & Pairing Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Network & Pairing</h2>
+                    <div class="card-icon">🌐</div>
+                </div>
+                
+                <div class="info-group">
+                    <span class="label">Host IP Address</span>
+                    <span class="value">{{ host_ip }}</span>
+                </div>
+                
+                <div class="info-group">
+                    <span class="label">Port</span>
+                    <span class="value">{{ port }}</span>
+                </div>
 
-    <div class='card'>
-        <h2>Approved Devices</h2>
-        <div id='approved-list'></div>
+                <div class="pairing-code-display">
+                    <span class="pairing-code-label">Pairing Code</span>
+                    <div class="pairing-code" id="pairing-code">{{ pairing_code }}</div>
+                </div>
+            </div>
+
+            <!-- Hardware Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Hardware</h2>
+                    <div class="card-icon">⚙️</div>
+                </div>
+                
+                <div class="hardware-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">GPU</div>
+                        <div class="stat-value">{{ hardware.gpu }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Backend</div>
+                        <div class="stat-value">{{ hardware.backend }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Device</div>
+                        <div class="stat-value">{{ hardware.device }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clients Grid -->
+        <div class="grid grid-2">
+            <!-- Pending Requests -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Pending Requests</h2>
+                    <div class="card-icon">⏳</div>
+                </div>
+                <div id="pending-list" class="clients-container"></div>
+            </div>
+
+            <!-- Approved Devices -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Approved Devices</h2>
+                    <div class="card-icon">✓</div>
+                </div>
+                <div id="approved-list" class="clients-container"></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -51,37 +469,71 @@
                 
                 const pendingDiv = document.getElementById('pending-list');
                 pendingDiv.innerHTML = '';
-                for (const [clientId, req] of Object.entries(data.pending)) {
-                    pendingDiv.innerHTML += `<div class='client-card'>
-                        <div><strong>${req.info.device_name}</strong> (${req.info.os})</div>
-                        <div style='margin-top:10px;'>
-                            <button onclick='approveClient("${clientId}")'>ALLOW</button>
-                            <button class='reject' onclick='rejectClient("${clientId}")'>REJECT</button>
-                        </div>
-                    </div>`;
+                
+                if (Object.keys(data.pending).length === 0) {
+                    pendingDiv.innerHTML = '<div class="empty-state"><div class="empty-state-icon">—</div><div>No pending requests</div></div>';
+                } else {
+                    for (const [clientId, req] of Object.entries(data.pending)) {
+                        pendingDiv.innerHTML += `
+                            <div class="client-card">
+                                <div class="client-header">
+                                    <div>
+                                        <div class="client-name">${req.info.device_name}</div>
+                                        <div class="client-info">${req.info.os}</div>
+                                    </div>
+                                    <span class="client-os">App v${req.info.app_version}</span>
+                                </div>
+                                <div class="button-group">
+                                    <button class="btn-primary" onclick="approveClient('${clientId}')">Allow</button>
+                                    <button class="btn-danger" onclick="rejectClient('${clientId}')">Reject</button>
+                                </div>
+                            </div>`;
+                    }
                 }
-                if(Object.keys(data.pending).length === 0) pendingDiv.innerHTML = 'None';
 
                 const approvedDiv = document.getElementById('approved-list');
                 approvedDiv.innerHTML = '';
-                for (const [clientId, req] of Object.entries(data.approved)) {
-                    approvedDiv.innerHTML += `<div class='client-card'>
-                        <div><strong>${req.info.device_name}</strong></div>
-                        <div style='margin-top:10px;'>
-                            <button class='reject' onclick='revokeClient("${clientId}")'>REVOKE ACCESS</button>
-                        </div>
-                    </div>`;
+                
+                if (Object.keys(data.approved).length === 0) {
+                    approvedDiv.innerHTML = '<div class="empty-state"><div class="empty-state-icon">—</div><div>No approved devices</div></div>';
+                } else {
+                    for (const [clientId, req] of Object.entries(data.approved)) {
+                        approvedDiv.innerHTML += `
+                            <div class="client-card">
+                                <div class="client-header">
+                                    <div class="client-name">${req.info.device_name}</div>
+                                    <span class="client-os">✓ Connected</span>
+                                </div>
+                                <div class="button-group">
+                                    <button class="btn-danger" onclick="revokeClient('${clientId}')" style="flex: 1;">Revoke Access</button>
+                                </div>
+                            </div>`;
+                    }
                 }
-                if(Object.keys(data.approved).length === 0) approvedDiv.innerHTML = 'None';
-            } catch (e) {}
+            } catch (e) {
+                console.error('Error fetching clients:', e);
+            }
         }
 
-        async function approveClient(id) { await fetch('/api/clients/' + id + '/approve', {method: 'POST'}); fetchClients(); }
-        async function rejectClient(id) { await fetch('/api/clients/' + id + '/reject', {method: 'POST'}); fetchClients(); }
-        async function revokeClient(id) { await fetch('/api/clients/' + id + '/revoke', {method: 'POST'}); fetchClients(); }
+        async function approveClient(id) {
+            await fetch('/api/clients/' + id + '/approve', {method: 'POST'});
+            fetchClients();
+        }
 
-        setInterval(fetchClients, 2000);
+        async function rejectClient(id) {
+            await fetch('/api/clients/' + id + '/reject', {method: 'POST'});
+            fetchClients();
+        }
+
+        async function revokeClient(id) {
+            await fetch('/api/clients/' + id + '/revoke', {method: 'POST'});
+            fetchClients();
+        }
+
+        // Fetch on load
         fetchClients();
+        // Poll every 2 seconds
+        setInterval(fetchClients, 2000);
     </script>
 </body>
 </html>

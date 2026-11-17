@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TurboMesh - Hand Sign Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark-bg: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --accent: #8b5cf6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 32px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .back-button {
+            padding: 10px 16px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .back-button:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: var(--primary);
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .grid-main {
+            grid-template-columns: 1.2fr 1fr;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+        }
+
+        /* Video/Camera */
+        video,
+        canvas {
+            width: 100%;
+            border-radius: 12px;
+            background: #000;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        /* Buttons */
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            background: #475569;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-stop {
+            background: var(--danger);
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            background: #dc2626;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* Status */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .status-ready {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #86efac;
+        }
+
+        .status-loading {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fcd34d;
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-loading .status-indicator {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Prediction Display */
+        .prediction-box {
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .prediction-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .prediction-class {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        /* Confidence Bar */
+        .confidence-item {
+            margin-bottom: 16px;
+        }
+
+        .confidence-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+        }
+
+        .confidence-label {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .confidence-value {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Probabilities */
+        .probabilities {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .prob-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.875rem;
+        }
+
+        .prob-item:last-child {
+            border-bottom: none;
+        }
+
+        .prob-class {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .prob-value {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 32px 16px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 0.95rem;
+        }
+
+        /* Messages */
+        .message-box {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: none;
+        }
+
+        .message-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .message-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #86efac;
+        }
+
+        /* Model Selection */
+        .model-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .model-card {
+            background: rgba(59, 130, 246, 0.05);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .model-card:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: var(--primary);
+        }
+
+        .model-card.active {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--success);
+        }
+
+        .model-card-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .model-card-info {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .grid-main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 16px;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+            }
+
+            .button-group {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-content">
+                <h1>🖐️ Hand Sign Detection</h1>
+                <a class="back-button" href="/">← Back to Dashboard</a>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-main">
+            <!-- Camera Feed Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Camera Feed</h2>
+                    <span class="card-icon">📷</span>
+                </div>
+
+                <video id="webcam" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+
+                <div id="camera-status" class="status-badge status-ready">
+                    <span class="status-indicator"></span>
+                    Ready
+                </div>
+
+                <div class="button-group">
+                    <button id="start-btn" class="btn-primary" onclick="startCamera()">Start Camera</button>
+                    <button id="stop-btn" class="btn-primary btn-stop" onclick="stopCamera()" disabled>Stop Camera</button>
+                </div>
+            </div>
+
+            <!-- Detection Results Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Detection Results</h2>
+                    <span class="card-icon">📊</span>
+                </div>
+
+                <div id="error-message" class="message-box message-error"></div>
+                <div id="success-message" class="message-box message-success"></div>
+
+                <div id="no-model" class="empty-state">
+                    <div class="empty-state-icon">⚙️</div>
+                    <div class="empty-state-text">No model loaded. Please select a model below.</div>
+                </div>
+
+                <div id="prediction-container" style="display: none;">
+                    <div class="prediction-box">
+                        <div class="prediction-label">Detected Hand Sign</div>
+                        <div class="prediction-class" id="predicted-class">—</div>
+                    </div>
+
+                    <div class="confidence-item">
+                        <div class="confidence-header">
+                            <span class="confidence-label">Confidence</span>
+                            <span class="confidence-value" id="confidence-percent">0%</span>
+                        </div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidence-fill"></div>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">FPS</div>
+                            <div class="stat-value" id="fps">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Inference Time</div>
+                            <div class="stat-value" id="inference-time">0ms</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="confidence-label" style="margin-bottom: 8px;">All Predictions</div>
+                        <div class="probabilities" id="probabilities"></div>
+                    </div>
+                </div>
+
+                <div id="model-info" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                    <div style="font-size: 0.875rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Model Information</div>
+                    <div style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 4px;"><strong>Architecture:</strong> <span id="model-arch">—</span></div>
+                    <div style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 4px;"><strong>Classes:</strong> <span id="model-classes">—</span></div>
+                    <div style="font-size: 0.9rem; color: var(--text-primary);"><strong>Input Size:</strong> <span id="model-input">—</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Selection Section -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Available Models</h2>
+                <span class="card-icon">🧠</span>
+            </div>
+
+            <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 0.9rem;">Select a trained hand sign recognition model to start real-time detection.</p>
+
+            <div id="model-list" class="model-list">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📦</div>
+                    <div class="empty-state-text">Loading available models...</div>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="refreshModels()" style="margin-top: 16px;">Refresh Models</button>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let modelLoaded = false;
+        let metadata = null;
+        let cameraActive = false;
+        let lastFrameTime = 0;
+        let frameCount = 0;
+        let fps = 0;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshModels();
+            updateUIState();
+        });
+        
+        async function refreshModels() {
+            const modelList = document.getElementById('model-list');
+            modelList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Loading...</div></div>';
+            
+            try {
+                const cachedModels = JSON.parse(localStorage.getItem('handSignModels') || '[]');
+                if (cachedModels.length > 0) {
+                    modelList.innerHTML = '';
+                    cachedModels.forEach((modelData, idx) => {
+                        const card = document.createElement('div');
+                        card.className = 'model-card';
+                        card.onclick = () => selectModel(idx, modelData);
+                        card.innerHTML = `
+                            <div class="model-card-title">${modelData.name || `Model ${idx + 1}`}</div>
+                            <div class="model-card-info">
+                                ${modelData.num_classes} Classes • ${modelData.input_size}×${modelData.input_size}px
+                            </div>`;
+                        modelList.appendChild(card);
+                    });
+                } else {
+                    modelList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📚</div>
+                            <div class="empty-state-text">
+                                <strong>No models available yet.</strong><br>
+                                Train a model on the main dashboard to see it here.
+                            </div>
+                        </div>`;
+                }
+            } catch (error) {
+                modelList.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✗</div><div class="empty-state-text">Error loading models</div></div>`;
+            }
+        }
+        
+        async function selectModel(idx, modelData) {
+            try {
+                metadata = modelData;
+                modelLoaded = true;
+                
+                document.getElementById('model-arch').innerText = metadata.model_architecture || 'MobileNetV2';
+                document.getElementById('model-classes').innerText = Object.values(metadata.classes).join(', ');
+                document.getElementById('model-input').innerText = `${metadata.input_size}×${metadata.input_size}`;
+                
+                updateUIState();
+                
+                // Highlight selected model
+                document.querySelectorAll('.model-card').forEach((card, i) => {
+                    if (i === idx) {
+                        card.classList.add('active');
+                    } else {
+                        card.classList.remove('active');
+                    }
+                });
+                
+                const successMsg = document.getElementById('success-message');
+                successMsg.innerText = `✓ Model loaded: ${metadata.num_classes} classes`;
+                successMsg.style.display = 'block';
+                setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
+                
+                // Auto-start camera after model loads
+                if (!cameraActive) {
+                    await startCamera();
+                }
+            } catch (error) {
+                const errorMsg = document.getElementById('error-message');
+                errorMsg.innerText = `✗ Failed to load model: ${error.message}`;
+                errorMsg.style.display = 'block';
+            }
+        }
+        
+        function updateUIState() {
+            const predContainer = document.getElementById('prediction-container');
+            const noModel = document.getElementById('no-model');
+            const modelInfo = document.getElementById('model-info');
+            
+            if (modelLoaded) {
+                predContainer.style.display = 'block';
+                noModel.style.display = 'none';
+                modelInfo.style.display = 'block';
+            } else {
+                predContainer.style.display = 'none';
+                noModel.style.display = 'block';
+                modelInfo.style.display = 'none';
+            }
+        }
+        
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' } 
+                });
+                
+                const video = document.getElementById('webcam');
+                video.srcObject = stream;
+                
+                cameraActive = true;
+                document.getElementById('start-btn').disabled = true;
+                document.getElementById('stop-btn').disabled = false;
+                
+                const statusBadge = document.getElementById('camera-status');
+                statusBadge.className = 'status-badge status-ready';
+                statusBadge.innerText = '✓ Camera Active';
+                
+                video.onloadedmetadata = () => {
+                    startInference();
+                };
+            } catch (error) {
+                const statusBadge = document.getElementById('camera-status');
+                statusBadge.className = 'status-badge status-error';
+                statusBadge.innerText = `✗ ${error.message}`;
+            }
+        }
+        
+        function stopCamera() {
+            const video = document.getElementById('webcam');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            
+            cameraActive = false;
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('stop-btn').disabled = true;
+            
+            const statusBadge = document.getElementById('camera-status');
+            statusBadge.className = 'status-badge status-ready';
+            statusBadge.innerText = 'Ready';
+        }
+        
+        async function startInference() {
+            if (!cameraActive || !modelLoaded) return;
+            
+            const video = document.getElementById('webcam');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            const inferenceLoop = async () => {
+                if (!cameraActive) return;
+                
+                try {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = canvas.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    const startTime = performance.now();
+                    const prediction = await runInference(imageData);
+                    const inferenceMs = performance.now() - startTime;
+                    
+                    updatePredictionUI(prediction, inferenceMs);
+                    
+                    frameCount++;
+                    const now = performance.now();
+                    if (now - lastFrameTime >= 1000) {
+                        fps = frameCount;
+                        frameCount = 0;
+                        lastFrameTime = now;
+                        document.getElementById('fps').innerText = fps;
+                    }
+                } catch (error) {
+                    console.error('Inference error:', error);
+                }
+                
+                requestAnimationFrame(inferenceLoop);
+            };
+            
+            inferenceLoop();
+        }
+        
+        async function runInference(imageData) {
+            const data = imageData.data;
+            const mean = metadata.preprocessing.normalize_mean;
+            const std = metadata.preprocessing.normalize_std;
+            const inputSize = metadata.input_size;
+            
+            const normalized = new Float32Array(inputSize * inputSize * 3);
+            const scaleX = imageData.width / inputSize;
+            const scaleY = imageData.height / inputSize;
+            
+            for (let y = 0; y < inputSize; y++) {
+                for (let x = 0; x < inputSize; x++) {
+                    const srcX = Math.floor(x * scaleX);
+                    const srcY = Math.floor(y * scaleY);
+                    const srcIdx = (srcY * imageData.width + srcX) * 4;
+                    
+                    const r = (data[srcIdx] / 255 - mean[0]) / std[0];
+                    const g = (data[srcIdx + 1] / 255 - mean[1]) / std[1];
+                    const b = (data[srcIdx + 2] / 255 - mean[2]) / std[2];
+                    
+                    const dstIdx = (y * inputSize + x) * 3;
+                    normalized[dstIdx] = r;
+                    normalized[dstIdx + 1] = g;
+                    normalized[dstIdx + 2] = b;
+                }
+            }
+            
+            const response = await fetch('/api/infer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    image_data: Array.from(normalized),
+                    input_size: inputSize,
+                    num_classes: metadata.num_classes
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Inference failed');
+            }
+            
+            return await response.json();
+        }
+        
+        function updatePredictionUI(prediction, inferenceMs) {
+            const predicted_class = metadata.classes[String(prediction.predicted_index)];
+            const confidence = prediction.confidence;
+            
+            document.getElementById('predicted-class').innerText = predicted_class;
+            document.getElementById('confidence-fill').style.width = (confidence * 100) + '%';
+            document.getElementById('confidence-percent').innerText = Math.round(confidence * 100) + '%';
+            document.getElementById('inference-time').innerText = Math.round(inferenceMs) + 'ms';
+            
+            const probContainer = document.getElementById('probabilities');
+            probContainer.innerHTML = '';
+            
+            const probs = prediction.probabilities;
+            const entries = Object.entries(probs)
+                .map(([idx, prob]) => ({ class: metadata.classes[String(idx)], prob }))
+                .sort((a, b) => b.prob - a.prob);
+            
+            entries.forEach(entry => {
+                const div = document.createElement('div');
+                div.className = 'prob-item';
+                div.innerHTML = `
+                    <span class="prob-class">${entry.class}</span>
+                    <span class="prob-value">${(entry.prob * 100).toFixed(1)}%</span>
+                `;
+                probContainer.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>

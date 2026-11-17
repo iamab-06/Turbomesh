@@ -1,7 +1,8 @@
 import asyncio
 import traceback
 from core.jobs import job_manager, STORAGE_DIR
-from core.processing import run_object_detection, run_image_similarity
+from core.processing import run_object_detection, run_image_similarity, run_hand_sign_detection
+from core.hand_sign_landmark_training import run_hand_sign_recognition
 import os
 
 async def process_job(job_id: str):
@@ -10,7 +11,7 @@ async def process_job(job_id: str):
     
     job['status'] = 'PROCESSING'
     job['progress'] = 10
-    job['stage'] = 'Starting inference'
+    job['stage'] = 'Starting processing'
     
     input_dir = os.path.join(STORAGE_DIR, job_id, 'input')
     output_dir = os.path.join(STORAGE_DIR, job_id, 'output')
@@ -22,6 +23,12 @@ async def process_job(job_id: str):
         elif job['operation'] == 'image_similarity':
             job['stage'] = 'Extracting features and computing similarity'
             result_files = await asyncio.to_thread(run_image_similarity, job, input_dir, output_dir)
+        elif job['operation'] == 'hand_sign_recognition':
+            job['stage'] = 'Training landmark-based hand sign recognition model'
+            result_files = await asyncio.to_thread(run_hand_sign_recognition, job, input_dir, output_dir)
+        elif job['operation'] == 'hand_sign_detection':
+            job['stage'] = 'Processing image for hand sign detection'
+            result_files = await asyncio.to_thread(run_hand_sign_detection, job, input_dir, output_dir)
         else:
             raise Exception('Unknown operation')
             

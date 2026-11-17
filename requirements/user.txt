@@ -7,3 +7,10 @@ pydantic
 requests
 httpx
 pytest
+torch
+torchvision
+Pillow
+numpy
+opencv-python
+mediapipe
+scikit-learn

@@ -1037,39 +1037,20 @@
         }
         
         async function runInference(imageData) {
-            const data = imageData.data;
-            const mean = detectionMetadata.preprocessing.normalize_mean;
-            const std = detectionMetadata.preprocessing.normalize_std;
-            const inputSize = detectionMetadata.input_size;
+            // For landmark-based inference, send the canvas frame as base64
+            const canvas = document.getElementById('canvas');
             
-            const normalized = new Float32Array(inputSize * inputSize * 3);
-            const scaleX = imageData.width / inputSize;
-            const scaleY = imageData.height / inputSize;
+            // Convert canvas to base64
+            const frameBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
             
-            for (let y = 0; y < inputSize; y++) {
-                for (let x = 0; x < inputSize; x++) {
-                    const srcX = Math.floor(x * scaleX);
-                    const srcY = Math.floor(y * scaleY);
-                    const srcIdx = (srcY * imageData.width + srcX) * 4;
-                    
-                    const r = (data[srcIdx] / 255 - mean[0]) / std[0];
-                    const g = (data[srcIdx + 1] / 255 - mean[1]) / std[1];
-                    const b = (data[srcIdx + 2] / 255 - mean[2]) / std[2];
-                    
-                    const dstIdx = (y * inputSize + x) * 3;
-                    normalized[dstIdx] = r;
-                    normalized[dstIdx + 1] = g;
-                    normalized[dstIdx + 2] = b;
-                }
-            }
-            
+            // Send to backend for landmark extraction and inference
             const response = await fetch('/api/infer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    image_data: Array.from(normalized),
-                    input_size: inputSize,
-                    num_classes: detectionMetadata.num_classes
+                    frame_data: frameBase64,
+                    image_width: canvas.width,
+                    image_height: canvas.height
                 })
             });
             
@@ -1078,10 +1059,20 @@
         }
         
         function updateDetectionUI(prediction, inferenceMs) {
+            if (!prediction.hand_detected) {
+                document.getElementById('detected-sign').innerText = '—';
+                document.getElementById('detected-sign').style.color = '#94a3b8';  // muted
+                document.getElementById('confidence-bar').style.width = '0%';
+                document.getElementById('confidence-text').innerText = '0%';
+                document.getElementById('inference-time').innerText = Math.round(inferenceMs) + 'ms';
+                return;
+            }
+            
             const predictedClass = prediction.predicted_class;
             const confidence = prediction.confidence;
             
             document.getElementById('detected-sign').innerText = predictedClass;
+            document.getElementById('detected-sign').style.color = '#22c55e';  // success green
             document.getElementById('confidence-bar').style.width = (confidence * 100) + '%';
             document.getElementById('confidence-text').innerText = Math.round(confidence * 100) + '%';
             document.getElementById('inference-time').innerText = Math.round(inferenceMs) + 'ms';

@@ -1,28 +1,26 @@
+import asyncio
+import os
+import json
+import pickle
+import numpy as np
 from fastapi import FastAPI, Request, HTTPException, Form, UploadFile, File
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import uvicorn
 import argparse
 from core.client import tm_client
+from core.hand_sign_inference import load_model as load_landmark_model, infer as landmark_infer
 import httpx
 import hashlib
-import asyncio
-import os
-import json
-import torch
-import torch.nn as nn
-from torchvision import models, transforms
-import numpy as np
-from PIL import Image
-import io
 import base64
+import cv2
 
 app = FastAPI(title='TurboMesh User')
 templates = Jinja2Templates(directory='templates')
 
-# Global state for loaded models
-loaded_model = None  # {'model': model, 'metadata': metadata}
+# Global state for loaded model
+loaded_model = None  # {'model_type': 'landmark', 'metadata': metadata}
 
 class PairRequest(BaseModel):
     host_ip: str
@@ -39,23 +37,10 @@ class FinalizeReq(BaseModel):
     expected_sha256: str
 
 class InferenceRequest(BaseModel):
-    image_data: list  # Flattened normalized image tensor
-    input_size: int
-    num_classes: int
-
-class PairRequest(BaseModel):
-    host_ip: str
-    port: int
-    pairing_code: str
-
-class JobCreateReq(BaseModel):
-    operation: str
-
-class FinalizeReq(BaseModel):
-    filename: str
-    total_chunks: int
-    expected_size: int
-    expected_sha256: str
+    # Frame data as base64-encoded image
+    frame_data: str
+    image_width: int
+    image_height: int
 
 @app.get('/')
 async def dashboard(request: Request):
@@ -127,11 +112,10 @@ async def proxy_result(job_id: str, filename: str):
 
 @app.post('/api/load-model')
 async def load_model_endpoint(model_file: UploadFile = File(...), metadata_file: UploadFile = File(...)):
-    """Load a trained hand sign model and metadata"""
+    """Load a trained hand sign model (RandomForest with landmarks)"""
     global loaded_model
     
     try:
-        # Read files
         model_data = await model_file.read()
         metadata_text = await metadata_file.read()
         
@@ -140,46 +124,28 @@ async def load_model_endpoint(model_file: UploadFile = File(...), metadata_file:
         
         # Parse metadata
         metadata = json.loads(metadata_text)
-        num_classes = metadata['num_classes']
-        print(f"Metadata parsed: {num_classes} classes")
+        model_type = metadata.get('model_type', 'unknown')
+        num_classes = metadata.get('num_classes', 10)
         
-        # Recreate model architecture (ResNet50)
-        model = models.resnet50(weights=None)  # Don't load pretrained weights
-        model.fc = nn.Linear(model.fc.in_features, num_classes)
+        print(f"Model type: {model_type}, Classes: {num_classes}")
         
-        # Load state dict with proper device mapping
-        model_bytes = io.BytesIO(model_data)
+        # Load model
+        success, message = load_landmark_model(model_data, metadata)
         
-        # Determine device - try to use same device as available
-        device = torch.device('cpu')
-        if torch.cuda.is_available():
-            device = torch.device('cuda')
-        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-            device = torch.device('mps')
+        if not success:
+            raise Exception(message)
         
-        print(f"Loading model to device: {device}")
-        
-        # The state_dict was serialized on the host, possibly on CUDA. Remapping
-        # CUDA storages straight to MPS/CUDA via a single-device map_location is
-        # unreliable across PyTorch versions and can raise "Attempting to
-        # deserialize object on a CUDA device but torch.cuda.is_available() is
-        # False". Deserializing to CPU first is universally supported; we then
-        # move the in-memory model to the chosen device below.
-        state_dict = torch.load(model_bytes, map_location=torch.device('cpu'))
-        model.load_state_dict(state_dict)
-        model.to(device)
-        model.eval()
-        
-        # Store loaded model
-        loaded_model = {'model': model, 'metadata': metadata, 'device': device}
-        
-        print(f"✓ Model loaded successfully with {num_classes} classes on {device}")
+        loaded_model = {
+            'model_type': model_type,
+            'metadata': metadata
+        }
         
         return {
             'status': 'success',
-            'message': f'Model loaded successfully with {num_classes} classes',
-            'classes': metadata['classes'],
-            'device': str(device)
+            'message': message,
+            'model_type': model_type,
+            'classes': metadata.get('classes', {}),
+            'num_classes': num_classes
         }
     except Exception as e:
         import traceback
@@ -189,42 +155,28 @@ async def load_model_endpoint(model_file: UploadFile = File(...), metadata_file:
 
 @app.post('/api/infer')
 async def infer(req: InferenceRequest):
-    """Run inference on normalized image data"""
+    """Run inference on a webcam frame"""
     global loaded_model
     
     if loaded_model is None:
         raise HTTPException(status_code=400, detail='No model loaded')
     
     try:
-        model = loaded_model['model']
-        metadata = loaded_model['metadata']
-        device = loaded_model.get('device', torch.device('cpu'))
+        # Decode base64 frame
+        frame_bytes = base64.b64decode(req.frame_data)
+        nparr = np.frombuffer(frame_bytes, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
-        # Convert list to tensor
-        image_tensor = torch.tensor(req.image_data, dtype=torch.float32)
-        image_tensor = image_tensor.view(1, 3, req.input_size, req.input_size)
-        image_tensor = image_tensor.to(device)
+        if frame is None:
+            raise Exception('Failed to decode frame')
         
-        # Run inference
-        with torch.no_grad():
-            output = model(image_tensor)
-            probabilities = torch.softmax(output[0], dim=0)
+        # Run inference (landmark-based)
+        result = landmark_infer(frame)
         
-        # Get prediction
-        predicted_idx = torch.argmax(probabilities).item()
-        confidence = probabilities[predicted_idx].item()
+        if result is None:
+            raise Exception('No model loaded')
         
-        # Convert to dict for JSON serialization
-        probs_dict = {}
-        for i, prob in enumerate(probabilities.cpu().tolist()):
-            probs_dict[str(i)] = prob
-        
-        return {
-            'predicted_index': predicted_idx,
-            'predicted_class': metadata['classes'][str(predicted_idx)],
-            'confidence': float(confidence),
-            'probabilities': probs_dict
-        }
+        return result
     except Exception as e:
         import traceback
         print(f"Inference error: {traceback.format_exc()}")
@@ -236,4 +188,3 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=8001)
     args = parser.parse_args()
     uvicorn.run('main:app', host=args.host, port=args.port, reload=False)
-

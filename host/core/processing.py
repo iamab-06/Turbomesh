@@ -11,6 +11,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 import torch.nn as nn
 from core.hardware import get_hardware_info
+from core.hand_sign_training import run_hand_sign_recognition
 
 hw = get_hardware_info()
 DEVICE = hw['device']
@@ -123,3 +124,27 @@ def run_image_similarity(job, input_dir, output_dir):
     with open(os.path.join(output_dir, 'similarity.json'), 'w') as f: json.dump(res, f, indent=4)
     return ['similarity.json']
 
+
+def run_hand_sign_detection(job, input_dir, output_dir):
+    """Placeholder for hand sign detection - returns metadata for model inference"""
+    files = list(job['files'].keys())
+    if len(files) != 1:
+        raise Exception('Hand Sign Detection requires exactly 1 image')
+    
+    img_path = os.path.join(input_dir, files[0])
+    
+    # For now, return basic image info and metadata
+    # The actual model inference happens on the User client
+    img = Image.open(img_path)
+    result = {
+        'operation': 'hand_sign_detection',
+        'image': files[0],
+        'image_size': img.size,
+        'processing_device': DEVICE,
+        'status': 'Image received and ready for inference on client'
+    }
+    
+    with open(os.path.join(output_dir, 'detection_result.json'), 'w') as f:
+        json.dump(result, f, indent=4)
+    
+    return ['detection_result.json']
