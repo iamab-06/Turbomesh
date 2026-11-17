@@ -1,72 +1,521 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TurboMesh User</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; background: #121212; color: #eee; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        h1, h2, h3 { color: #fff; margin-top: 0; }
-        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }
-        .info-row:last-child { border-bottom: none; }
-        .label { color: #aaa; }
-        .value { font-weight: bold; color: #4ade80; }
-        input, select { background: #333; color: white; border: 1px solid #555; padding: 8px; border-radius: 4px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
-        button { background: #3b82f6; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-top:10px; }
-        button:disabled { background: #555; cursor: not-allowed; }
-        #status-box, #job-status-box { text-align: center; font-weight: bold; padding: 10px; margin-top: 10px; border-radius: 4px; display: none; }
-        .status-pending { background: #ca8a04; }
-        .status-approved, .status-success { background: #166534; }
-        .status-rejected, .status-error { background: #991b1b; }
-        .progress-bar { width: 100%; background: #333; border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; }
-        .progress-fill { height: 10px; background: #4ade80; width: 0%; transition: width 0.3s; }
-        #results-area { margin-top: 20px; padding: 10px; background: #222; border-radius: 4px; display: none; }
-        #result-img { max-width: 100%; border-radius: 4px; margin-top: 10px; }
-        pre { background: #111; padding: 10px; overflow-x: auto; border-radius: 4px; color: #4ade80; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark-bg: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --accent: #8b5cf6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 40px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+
+        .header-subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-top: 4px;
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        /* Info Display */
+        .info-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-bottom: 16px;
+        }
+
+        .info-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .value {
+            font-size: 1.0625rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 4px;
+            word-break: break-all;
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.08);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(59, 130, 246, 0.05);
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        input[type="file"]:hover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        /* Buttons */
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            margin-top: 12px;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            background: #475569;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-secondary {
+            background: rgba(139, 92, 246, 0.1);
+            color: #c4b5fd;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            margin-top: 8px;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: var(--accent);
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: none;
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fcd34d;
+        }
+
+        .status-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #86efac;
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 16px;
+            display: none;
+        }
+
+        .progress-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 3px;
+        }
+
+        /* Results Area */
+        .results-area {
+            display: none;
+            margin-top: 24px;
+        }
+
+        .results-header {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .result-item {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .result-img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .result-json {
+            background: var(--dark-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: #86efac;
+            line-height: 1.5;
+            margin-top: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Hidden States */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 16px;
+            }
+
+            h1 {
+                font-size: 1.875rem;
+            }
+
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            button {
+                padding: 10px 16px;
+                font-size: 0.8125rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>TurboMesh User</h1>
-    
-    <div class='card' id='connection-card'>
-        <h2>Connect to TurboMesh Host</h2>
-        <label class="label">Host IP:</label>
-        <input type="text" id="host_ip" placeholder="192.168.1.x" />
-        
-        <label class="label">Port:</label>
-        <input type="number" id="port" value="8000" />
-        
-        <label class="label">Pairing Code:</label>
-        <input type="text" id="pairing_code" placeholder="123456" />
-        
-        <button onclick="connect()">CONNECT</button>
-        <div id="status-box"></div>
-    </div>
-    
-    <div class='card' id='dashboard-card' style="display:none;">
-        <h2>Connection Info</h2>
-        <div class='info-row'><span class='label'>Status:</span><span class='value'>Authenticated</span></div>
-        <div class='info-row'><span class='label'>Host IP:</span><span class='value' id='host-ip-val'></span></div>
-        
-        <h2 style="margin-top:20px;">Create Job</h2>
-        <label class="label">Operation:</label>
-        <select id="operation" onchange="updateFileInputs()">
-            <option value="object_detection">Object Detection & Image Analytics (1 image)</option>
-            <option value="image_similarity">Image Similarity / Duplicate Detection (2 images)</option>
-        </select>
-        
-        <div id="file-inputs">
-            <input type="file" id="file1" accept="image/*" />
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-content">
+                <div>
+                    <h1>TurboMesh User</h1>
+                    <p class="header-subtitle">Remote GPU processing client</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Connection Card -->
+        <div id="connection-card" class="grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Connect to Host</h2>
+                    <div class="card-icon">🔗</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="host_ip">Host IP Address</label>
+                    <input type="text" id="host_ip" placeholder="192.168.1.x" />
+                </div>
+
+                <div class="form-group">
+                    <label for="port">Port</label>
+                    <input type="number" id="port" value="8000" />
+                </div>
+
+                <div class="form-group">
+                    <label for="pairing_code">Pairing Code</label>
+                    <input type="text" id="pairing_code" placeholder="123456" />
+                </div>
+
+                <button class="btn-primary" onclick="connect()">Connect to Host</button>
+                <div id="status-box" class="status-message"></div>
+            </div>
         </div>
-        
-        <button id="start-job-btn" onclick="startJob()">CREATE JOB & UPLOAD</button>
-        <div id="job-status-box"></div>
-        <div class="progress-bar" id="upload-progress"><div class="progress-fill" id="upload-fill"></div></div>
-        <div class="progress-bar" id="process-progress"><div class="progress-fill" id="process-fill"></div></div>
-        
-        <div id="results-area">
-            <h3>Results</h3>
-            <div id="result-content"></div>
+
+        <!-- Dashboard Card -->
+        <div id="dashboard-card" class="hidden">
+            <!-- Connection Info -->
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Connection Status</h2>
+                        <div class="card-icon">✓</div>
+                    </div>
+                    
+                    <div class="info-group">
+                        <span class="label">Status</span>
+                        <span class="value" style="color: #86efac;">Authenticated</span>
+                    </div>
+                    
+                    <div class="info-group">
+                        <span class="label">Host IP Address</span>
+                        <span class="value" id="host-ip-val">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Job Card -->
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Create Job</h2>
+                        <div class="card-icon">⚡</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="operation">Operation</label>
+                        <select id="operation" onchange="updateFileInputs()">
+                            <option value="object_detection">Object Detection & Image Analytics</option>
+                            <option value="image_similarity">Image Similarity / Duplicate Detection</option>
+                            <option value="hand_sign_recognition">Hand Sign Recognition - Train Model</option>
+                        </select>
+                    </div>
+
+                    <div id="file-inputs">
+                        <div class="form-group">
+                            <label for="file1">Image File</label>
+                            <input type="file" id="file1" accept="image/*" />
+                        </div>
+                    </div>
+
+                    <button id="start-job-btn" class="btn-primary" onclick="startJob()">Create Job & Upload</button>
+                    
+                    <div id="job-status-box" class="status-message"></div>
+                    
+                    <div class="progress-container" id="upload-progress">
+                        <div class="progress-label">
+                            <span>Uploading Files</span>
+                            <span id="upload-percent">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="upload-fill"></div>
+                        </div>
+                    </div>
+
+                    <div class="progress-container" id="process-progress">
+                        <div class="progress-label">
+                            <span>Processing</span>
+                            <span id="process-percent">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="process-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Area -->
+            <div id="results-area" class="results-area">
+                <div class="grid">
+                    <div class="card">
+                        <div class="results-header">📊 Results</div>
+                        <div id="result-content"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -78,10 +527,29 @@
         function updateFileInputs() {
             const op = document.getElementById('operation').value;
             const container = document.getElementById('file-inputs');
-            if (op === 'object_detection') {
-                container.innerHTML = '<input type="file" id="file1" accept="image/*" />';
-            } else {
-                container.innerHTML = '<input type="file" id="file1" accept="image/*" /><input type="file" id="file2" accept="image/*" />';
+            
+            if (op === 'object_detection' || op === 'hand_sign_detection') {
+                container.innerHTML = `
+                    <div class="form-group">
+                        <label for="file1">Image File</label>
+                        <input type="file" id="file1" accept="image/*" />
+                    </div>`;
+            } else if (op === 'image_similarity') {
+                container.innerHTML = `
+                    <div class="form-group">
+                        <label for="file1">First Image</label>
+                        <input type="file" id="file1" accept="image/*" />
+                    </div>
+                    <div class="form-group">
+                        <label for="file2">Second Image</label>
+                        <input type="file" id="file2" accept="image/*" />
+                    </div>`;
+            } else if (op === 'hand_sign_recognition') {
+                container.innerHTML = `
+                    <div class="form-group">
+                        <label for="file1">Dataset ZIP File</label>
+                        <input type="file" id="file1" accept=".zip" />
+                    </div>`;
             }
         }
 
@@ -92,8 +560,8 @@
             
             const sb = document.getElementById('status-box');
             sb.style.display = 'block';
-            sb.className = 'status-pending';
-            sb.innerText = 'Connecting...';
+            sb.className = 'status-message status-pending';
+            sb.innerText = '⏳ Connecting...';
 
             try {
                 const res = await fetch('/api/pair', {
@@ -103,16 +571,16 @@
                 });
                 
                 if (res.ok) {
-                    sb.innerText = 'Waiting for Host approval...';
+                    sb.innerText = '⏳ Waiting for Host approval...';
                     pollInterval = setInterval(checkStatus, 2000);
                 } else {
                     const data = await res.json();
-                    sb.className = 'status-error';
-                    sb.innerText = 'Error: ' + data.detail;
+                    sb.className = 'status-message status-error';
+                    sb.innerText = '✗ Error: ' + data.detail;
                 }
             } catch (e) {
-                sb.className = 'status-error';
-                sb.innerText = 'Connection failed';
+                sb.className = 'status-message status-error';
+                sb.innerText = '✗ Connection failed';
             }
         }
 
@@ -123,24 +591,16 @@
                 
                 if (data.auth.status === 'approved') {
                     if (pollInterval) clearInterval(pollInterval);
-                    document.getElementById('connection-card').style.display = 'none';
-                    document.getElementById('dashboard-card').style.display = 'block';
+                    document.getElementById('connection-card').classList.add('hidden');
+                    document.getElementById('dashboard-card').classList.remove('hidden');
                     if (data.host) {
                         document.getElementById('host-ip-val').innerText = data.host.ip;
                     }
-                    // Fetch token from user backend so we can use WS
-                    const statusRes = await fetch('/api/status');
-                    const d = await statusRes.json();
-                    
-                    // We need the raw token for WS. The backend `status` doesn't expose it directly for security, 
-                    // wait I should expose it from User backend to JS so JS can connect directly to Host WS?
-                    // Yes, we will modify backend to return token.
-                    
                 } else if (data.auth.status === 'rejected') {
                     if (pollInterval) clearInterval(pollInterval);
                     const sb = document.getElementById('status-box');
-                    sb.className = 'status-error';
-                    sb.innerText = 'Connection rejected by Host.';
+                    sb.className = 'status-message status-error';
+                    sb.innerText = '✗ Connection rejected by Host';
                 }
             } catch (e) {}
         }
@@ -181,7 +641,9 @@
                 const res = await fetch(`/api/jobs/${jobId}/upload/chunk`, { method: 'POST', body: formData });
                 if (!res.ok) throw new Error('Chunk upload failed');
                 
-                progressFill.style.width = ((i + 1) / totalChunks * 100) + '%';
+                const percent = Math.round(((i + 1) / totalChunks) * 100);
+                progressFill.style.width = percent + '%';
+                document.getElementById('upload-percent').innerText = percent + '%';
             }
             
             const res = await fetch(`/api/jobs/${jobId}/upload/finalize`, {
@@ -202,12 +664,25 @@
             document.getElementById('results-area').style.display = 'none';
             document.getElementById('process-progress').style.display = 'none';
             
-            if (op === 'object_detection' && !file1) { jsb.className = 'status-error'; jsb.innerText = 'Exactly 1 image required.'; return; }
-            if (op === 'image_similarity' && (!file1 || !file2)) { jsb.className = 'status-error'; jsb.innerText = 'Exactly 2 images required.'; return; }
+            if (op === 'object_detection' && !file1) { 
+                jsb.className = 'status-message status-error'; 
+                jsb.innerText = '✗ Exactly 1 image required.'; 
+                return; 
+            }
+            if (op === 'image_similarity' && (!file1 || !file2)) { 
+                jsb.className = 'status-message status-error'; 
+                jsb.innerText = '✗ Exactly 2 images required.'; 
+                return; 
+            }
+            if (op === 'hand_sign_recognition' && !file1) { 
+                jsb.className = 'status-message status-error'; 
+                jsb.innerText = '✗ ZIP dataset file required.'; 
+                return; 
+            }
 
             document.getElementById('start-job-btn').disabled = true;
-            jsb.className = 'status-pending';
-            jsb.innerText = 'Creating Job...';
+            jsb.className = 'status-message status-pending';
+            jsb.innerText = '⏳ Creating Job...';
             
             try {
                 const res = await fetch('/api/jobs', {
@@ -218,7 +693,7 @@
                 if (!res.ok) throw new Error('Job creation failed');
                 const job = await res.json();
                 
-                jsb.innerText = 'Uploading files...';
+                jsb.innerText = '⏳ Uploading files...';
                 document.getElementById('upload-progress').style.display = 'block';
                 const fill = document.getElementById('upload-fill');
                 fill.style.width = '0%';
@@ -226,16 +701,17 @@
                 await uploadFile(job.job_id, file1, fill);
                 if (file2) {
                     fill.style.width = '0%';
+                    document.getElementById('upload-percent').innerText = '0%';
                     await uploadFile(job.job_id, file2, fill);
                 }
                 
-                jsb.className = 'status-pending';
-                jsb.innerText = 'Upload Complete! Waiting for processing...';
+                jsb.className = 'status-message status-pending';
+                jsb.innerText = '⏳ Upload Complete! Processing...';
                 
                 monitorJob(job.job_id);
             } catch (e) {
-                jsb.className = 'status-error';
-                jsb.innerText = 'Error: ' + e.message;
+                jsb.className = 'status-message status-error';
+                jsb.innerText = '✗ Error: ' + e.message;
                 document.getElementById('start-job-btn').disabled = false;
             }
         }
@@ -243,9 +719,8 @@
         async function monitorJob(jobId) {
             const statusRes = await fetch('/api/status');
             const statusData = await statusRes.json();
-            const token = statusData.raw_token; // need to expose this
+            const token = statusData.raw_token;
             const hostIp = statusData.host.ip;
-            const hostPort = 8000; // should be dynamic, we'll hardcode for now as host_url isn't parsed
             
             const wsUrl = `ws://${hostIp}:8000/ws/jobs/${jobId}?token=${token}`;
             const ws = new WebSocket(wsUrl);
@@ -257,28 +732,30 @@
             ws.onmessage = async (event) => {
                 const data = JSON.parse(event.data);
                 if (data.error) {
-                    jsb.className = 'status-error'; jsb.innerText = data.error; ws.close(); return;
+                    jsb.className = 'status-message status-error'; 
+                    jsb.innerText = '✗ ' + data.error; 
+                    ws.close(); 
+                    document.getElementById('start-job-btn').disabled = false;
+                    return;
                 }
                 
-                jsb.innerText = `Status: ${data.status} | Stage: ${data.stage}`;
-                pfill.style.width = (data.progress || 0) + '%';
+                jsb.innerText = `⏳ ${data.status} • ${data.stage}`;
+                const progress = data.progress || 0;
+                pfill.style.width = progress + '%';
+                document.getElementById('process-percent').innerText = progress + '%';
                 
                 if (data.status === 'COMPLETED') {
-                    jsb.className = 'status-success';
-                    jsb.innerText = 'Processing Complete!';
+                    jsb.className = 'status-message status-success';
+                    jsb.innerText = '✓ Processing Complete!';
                     document.getElementById('start-job-btn').disabled = false;
                     await fetchAndDisplayResults(jobId, data.result_files, hostIp, token);
                     ws.close();
                 } else if (data.status === 'FAILED') {
-                    jsb.className = 'status-error';
-                    jsb.innerText = `Processing Failed: ${data.stage}`;
+                    jsb.className = 'status-message status-error';
+                    jsb.innerText = `✗ Processing Failed: ${data.stage}`;
                     document.getElementById('start-job-btn').disabled = false;
                     ws.close();
                 }
-            };
-            
-            ws.onclose = () => {
-                // If WS closed prematurely, could fallback to REST polling
             };
         }
 
@@ -288,22 +765,342 @@
             resultsArea.style.display = 'block';
             content.innerHTML = '';
             
+            let metadata = null;
+            let modelFile = null;
+            
+            console.log('Processing result files:', files);
+            
             for (const file of files) {
-                // Fetch file using User backend proxy to bypass CORS/add token header if needed,
-                // OR since token is just in header, we can proxy it through User backend.
-                // Let's proxy through User backend.
                 const url = `/api/jobs/${jobId}/result/${file}`;
                 
                 if (file.endsWith('.json')) {
                     const res = await fetch(url);
                     const data = await res.json();
-                    content.innerHTML += `<h4>${file}</h4><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    
+                    console.log('JSON file:', file, data);
+                    
+                    // Check if this is hand sign metadata
+                    if (file.includes('metadata') && data.classes && data.model_architecture) {
+                        metadata = data;
+                        localStorage.setItem('handSignModels', JSON.stringify([data]));
+                        console.log('✓ Hand sign metadata detected:', metadata);
+                    }
+                    
+                    content.innerHTML += `
+                        <div class="result-item">
+                            <div class="result-title">📄 ${file}</div>
+                            <div class="result-json">${JSON.stringify(data, null, 2)}</div>
+                        </div>`;
+                } else if (file.endsWith('.pt')) {
+                    modelFile = file;
+                    console.log('✓ Model file detected:', modelFile);
+                    content.innerHTML += `
+                        <div class="result-item">
+                            <div class="result-title">🧠 ${file}</div>
+                            <div style="color: var(--text-muted); font-size: 0.9rem;">Trained model file</div>
+                        </div>`;
                 } else if (file.match(/\.(jpg|jpeg|png)$/i)) {
-                    content.innerHTML += `<h4>${file}</h4><img id="result-img" src="${url}" />`;
+                    content.innerHTML += `
+                        <div class="result-item">
+                            <div class="result-title">🖼️ ${file}</div>
+                            <img class="result-img" src="${url}" />
+                        </div>`;
+                }
+            }
+            
+            console.log('Metadata found:', metadata !== null);
+            console.log('Model file found:', modelFile !== null);
+            
+            // If metadata and model file were found, load model and start camera
+            if (metadata && modelFile) {
+                console.log('✓ Both metadata and model file found - starting camera setup...');
+                content.innerHTML += `
+                    <div class="result-item" style="margin-top: 24px;">
+                        <div id="loading-model" style="padding: 16px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #fcd34d; border-radius: 8px; text-align: center;">
+                            ⏳ Loading trained model for real-time detection...
+                        </div>
+                        <div id="camera-container" style="display: none;">
+                            <div class="result-title">📹 Real-Time Hand Sign Detection</div>
+                            <video id="webcam" autoplay playsinline style="width: 100%; border-radius: 12px; background: #000; margin: 16px 0;"></video>
+                            <canvas id="canvas" style="display: none;"></canvas>
+                            <div id="camera-status" style="padding: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #86efac; border-radius: 8px; margin-bottom: 12px; text-align: center;">
+                                Starting camera...
+                            </div>
+                            <div id="prediction-display" style="background: rgba(59, 130, 246, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px;">
+                                <div style="font-size: 0.875rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Detected Sign</div>
+                                <div id="detected-sign" style="font-size: 2rem; font-weight: 700; color: var(--success); text-align: center;">—</div>
+                                <div style="margin-top: 12px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.875rem;">
+                                        <span style="color: var(--text-muted);">Confidence</span>
+                                        <span id="confidence-text" style="color: var(--text-primary); font-weight: 700;">0%</span>
+                                    </div>
+                                    <div style="width: 100%; height: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 4px; overflow: hidden;">
+                                        <div id="confidence-bar" style="height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s ease; border-radius: 4px;"></div>
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+                                    <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center;">
+                                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">FPS</div>
+                                        <div id="fps-display" style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">0</div>
+                                    </div>
+                                    <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center;">
+                                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Inference</div>
+                                        <div id="inference-time" style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">0ms</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button id="camera-btn" onclick="toggleCamera()" style="margin-top: 12px; width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">START CAMERA</button>
+                        </div>
+                    </div>`;
+                
+                // Load model and start camera
+                await loadModelAndStartCamera(jobId, modelFile, metadata);
+            } else {
+                console.log('❌ Camera not starting - metadata:', metadata !== null, 'modelFile:', modelFile !== null);
+            }
+        }
+        
+        let detectionActive = false;
+        let detectionMetadata = null;
+        let lastFrameTime = 0;
+        let frameCount = 0;
+        
+        async function toggleCamera() {
+            if (detectionActive) {
+                stopDetection();
+            } else {
+                await startHandSignDetection();
+            }
+        }
+        
+        function updateCameraButton(state) {
+            const btn = document.getElementById('camera-btn');
+            if (state === 'running') {
+                btn.innerHTML = 'STOP CAMERA';
+                btn.style.background = 'var(--danger)';
+            } else {
+                btn.innerHTML = 'START CAMERA';
+                btn.style.background = 'var(--primary)';
+            }
+        }
+        
+        async function loadModelAndStartCamera(jobId, modelFile, metadata) {
+            console.log('loadModelAndStartCamera called with:', {jobId, modelFile, metadata});
+            try {
+                // Download model file
+                console.log('Downloading model file...');
+                const modelUrl = `/api/jobs/${jobId}/result/${modelFile}`;
+                const modelRes = await fetch(modelUrl);
+                
+                if (!modelRes.ok) {
+                    throw new Error('Failed to download model file: ' + modelRes.status);
+                }
+                
+                const modelBlob = await modelRes.blob();
+                console.log('✓ Model downloaded, size:', modelBlob.size, 'bytes');
+                
+                const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+                
+                // Load model into inference engine
+                console.log('Loading model into inference engine...');
+                const formData = new FormData();
+                formData.append('model_file', modelBlob, 'model.pt');
+                formData.append('metadata_file', metadataBlob, 'metadata.json');
+                
+                const loadRes = await fetch('/api/load-model', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!loadRes.ok) {
+                    const errorText = await loadRes.text();
+                    throw new Error('Failed to load model: ' + errorText);
+                }
+                
+                const loadResult = await loadRes.json();
+                console.log('✓ Model loaded successfully:', loadResult);
+                
+                // Hide loading, show camera UI
+                document.getElementById('loading-model').style.display = 'none';
+                document.getElementById('camera-container').style.display = 'block';
+                
+                detectionMetadata = metadata;
+                
+                // Show status that user can now start camera
+                document.getElementById('camera-status').innerHTML = '✓ Model loaded - Ready to start camera';
+                document.getElementById('camera-status').style.background = 'rgba(16, 185, 129, 0.1)';
+                document.getElementById('camera-status').style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                document.getElementById('camera-status').style.color = '#86efac';
+                console.log('Model ready, user can click START CAMERA');
+                
+            } catch (error) {
+                console.error('❌ Error in loadModelAndStartCamera:', error);
+                const loadingDiv = document.getElementById('loading-model');
+                if (loadingDiv) {
+                    loadingDiv.innerHTML = '✗ Failed to load model: ' + error.message;
+                    loadingDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                    loadingDiv.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                    loadingDiv.style.color = '#fca5a5';
                 }
             }
         }
+        
+        async function startHandSignDetection() {
+            console.log('startHandSignDetection called');
+            detectionActive = true;
+            updateCameraButton('running');
+            
+            try {
+                // Check if browser supports mediaDevices API
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('Your browser does not support camera access. Please use a modern browser (Chrome, Firefox, Safari, Edge) with HTTPS or localhost.');
+                }
+                
+                console.log('Requesting camera access...');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    } 
+                });
+                
+                console.log('✓ Camera access granted');
+                const video = document.getElementById('webcam');
+                video.srcObject = stream;
+                
+                document.getElementById('camera-status').innerHTML = '✓ Camera Active - Detecting hand signs...';
+                
+                video.onloadedmetadata = () => {
+                    console.log('✓ Video metadata loaded, starting detection loop');
+                    runDetectionLoop();
+                };
+            } catch (error) {
+                console.error('❌ Camera error:', error);
+                detectionActive = false;
+                updateCameraButton('stopped');
+                
+                let errorMsg = error.message;
+                if (error.name === 'NotAllowedError') {
+                    errorMsg = 'Camera permission denied. Please allow access in browser settings.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMsg = 'No camera device found.';
+                } else if (error.name === 'NotReadableError') {
+                    errorMsg = 'Camera is in use by another application.';
+                }
+                
+                document.getElementById('camera-status').innerHTML = '✗ Camera access denied: ' + errorMsg;
+                document.getElementById('camera-status').style.background = 'rgba(239, 68, 68, 0.1)';
+                document.getElementById('camera-status').style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                document.getElementById('camera-status').style.color = '#fca5a5';
+            }
+        }
+        
+        async function runDetectionLoop() {
+            if (!detectionActive) return;
+            
+            const video = document.getElementById('webcam');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            const loop = async () => {
+                if (!detectionActive) return;
+                
+                try {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    const startTime = performance.now();
+                    const prediction = await runInference(imageData);
+                    const inferenceMs = performance.now() - startTime;
+                    
+                    updateDetectionUI(prediction, inferenceMs);
+                    
+                    frameCount++;
+                    const now = performance.now();
+                    if (now - lastFrameTime >= 1000) {
+                        document.getElementById('fps-display').innerText = frameCount;
+                        frameCount = 0;
+                        lastFrameTime = now;
+                    }
+                } catch (error) {
+                    console.error('Detection error:', error);
+                }
+                
+                requestAnimationFrame(loop);
+            };
+            
+            loop();
+        }
+        
+        async function runInference(imageData) {
+            const data = imageData.data;
+            const mean = detectionMetadata.preprocessing.normalize_mean;
+            const std = detectionMetadata.preprocessing.normalize_std;
+            const inputSize = detectionMetadata.input_size;
+            
+            const normalized = new Float32Array(inputSize * inputSize * 3);
+            const scaleX = imageData.width / inputSize;
+            const scaleY = imageData.height / inputSize;
+            
+            for (let y = 0; y < inputSize; y++) {
+                for (let x = 0; x < inputSize; x++) {
+                    const srcX = Math.floor(x * scaleX);
+                    const srcY = Math.floor(y * scaleY);
+                    const srcIdx = (srcY * imageData.width + srcX) * 4;
+                    
+                    const r = (data[srcIdx] / 255 - mean[0]) / std[0];
+                    const g = (data[srcIdx + 1] / 255 - mean[1]) / std[1];
+                    const b = (data[srcIdx + 2] / 255 - mean[2]) / std[2];
+                    
+                    const dstIdx = (y * inputSize + x) * 3;
+                    normalized[dstIdx] = r;
+                    normalized[dstIdx + 1] = g;
+                    normalized[dstIdx + 2] = b;
+                }
+            }
+            
+            const response = await fetch('/api/infer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    image_data: Array.from(normalized),
+                    input_size: inputSize,
+                    num_classes: detectionMetadata.num_classes
+                })
+            });
+            
+            if (!response.ok) throw new Error('Inference failed');
+            return await response.json();
+        }
+        
+        function updateDetectionUI(prediction, inferenceMs) {
+            const predictedClass = prediction.predicted_class;
+            const confidence = prediction.confidence;
+            
+            document.getElementById('detected-sign').innerText = predictedClass;
+            document.getElementById('confidence-bar').style.width = (confidence * 100) + '%';
+            document.getElementById('confidence-text').innerText = Math.round(confidence * 100) + '%';
+            document.getElementById('inference-time').innerText = Math.round(inferenceMs) + 'ms';
+        }
+        
+        function stopDetection() {
+            detectionActive = false;
+            updateCameraButton('stopped');
+            const video = document.getElementById('webcam');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            document.getElementById('camera-status').innerHTML = '○ Camera stopped';
+            document.getElementById('camera-status').style.background = 'rgba(148, 163, 184, 0.1)';
+            document.getElementById('camera-status').style.borderColor = 'rgba(148, 163, 184, 0.3)';
+            document.getElementById('camera-status').style.color = '#cbd5e1';
+        }
 
+        // Initialize
         checkStatus();
     </script>
 </body>
