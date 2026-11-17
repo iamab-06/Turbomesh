@@ -172,20 +172,21 @@ def train_hand_sign_model(dataset_dir, job, output_dir):
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
     
-    # Load pre-trained MobileNetV2
+    # Load pre-trained ResNet50 (more accurate than MobileNetV2)
     job['stage'] = 'Loading pre-trained model'
     job['progress'] = 25
     
-    model = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.IMAGENET1K_V1)
-    model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
+    model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+    # Replace final classification layer
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
     model.to(DEVICE)
     
-    # Training setup
+    # Training setup - train all layers for better accuracy
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.classifier.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001)  # Lower LR for fine-tuning
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
     
-    num_epochs = 10
+    num_epochs = 15  # Increased for better convergence
     best_val_acc = 0.0
     training_history = []
     
@@ -267,8 +268,8 @@ def train_hand_sign_model(dataset_dir, job, output_dir):
     
     metadata = {
         'model_name': 'Hand Sign Recognition Model',
-        'model_version': '1.0.0',
-        'model_architecture': 'MobileNetV2',
+        'model_version': '2.0.0',
+        'model_architecture': 'ResNet50',
         'num_classes': num_classes,
         'classes': dataset.idx_to_class,
         'class_to_index': dataset.class_to_idx,
@@ -283,10 +284,11 @@ def train_hand_sign_model(dataset_dir, job, output_dir):
             'epochs': num_epochs,
             'batch_size': 16,
             'optimizer': 'Adam',
-            'learning_rate': 0.001,
+            'learning_rate': 0.0001,
             'loss_function': 'CrossEntropyLoss',
             'train_test_split': 0.8,
-            'device': DEVICE
+            'device': DEVICE,
+            'notes': 'Fine-tuned ResNet50 with all layers trainable for better accuracy'
         },
         'metrics': {
             'best_validation_accuracy': round(float(best_val_acc), 2),

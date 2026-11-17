@@ -143,9 +143,9 @@ async def load_model_endpoint(model_file: UploadFile = File(...), metadata_file:
         num_classes = metadata['num_classes']
         print(f"Metadata parsed: {num_classes} classes")
         
-        # Recreate model architecture (MobileNetV2)
-        model = models.mobilenet_v2(weights=None)  # Don't load pretrained weights
-        model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
+        # Recreate model architecture (ResNet50)
+        model = models.resnet50(weights=None)  # Don't load pretrained weights
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
         
         # Load state dict with proper device mapping
         model_bytes = io.BytesIO(model_data)
