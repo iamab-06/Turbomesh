@@ -38,6 +38,15 @@ htmlcov/
 logs/
 tmp/
 temp/
+*.txt.log
+train_out*.txt
+training_output*.log
+
+# Model weights and archives
+*.pt
+*.onnx
+*.zip
+*.tar.gz
 
 # IDE and editor files
 .vscode/
@@ -47,10 +56,13 @@ temp/
 .DS_Store
 Thumbs.db
 
-# Project-specific runtime artifacts
+# Project-specific runtime & job storage
 host/storage/
 user/storage/
 storage/
-
-# Optional: keep generated job output out of Git
 **/jobs/
+test_output/
+test_training_run/
+sample_images/
+test_images/
+simple_test_extract/
