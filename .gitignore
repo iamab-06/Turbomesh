@@ -45,8 +45,8 @@ training_output*.log
 # Model weights and archives
 *.pt
 *.onnx
-*.zip
 *.tar.gz
+!archive.zip
 
 # IDE and editor files
 .vscode/
