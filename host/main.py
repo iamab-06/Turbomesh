@@ -13,6 +13,7 @@ import time
 from core.network import get_lan_ip
 from core.hardware import get_hardware_info
 from core.auth import auth_manager, get_current_client, security
+from core.rate_limiter import pairing_rate_limiter
 from core.jobs import job_manager, STORAGE_DIR
 from core.worker import process_job
 
@@ -32,7 +33,16 @@ async def dashboard(request: Request):
     return templates.TemplateResponse(request=request, name='dashboard.html', context={'host_ip': host_ip, 'port': getattr(request.app.state, 'port', 8000), 'hardware': hardware_info, 'pairing_code': auth_manager.get_pairing_code()})
 
 @app.post('/api/auth/pair')
-async def pair_device(req: PairRequest): return auth_manager.receive_pairing_request(req.pairing_code, req.dict())
+async def pair_device(req: PairRequest, request: Request):
+    client_ip = request.client.host if request.client else '127.0.0.1'
+    allowed, retry_after, remaining = pairing_rate_limiter.check(client_ip)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f'Rate limit exceeded. Too many pairing attempts. Please retry in {retry_after} seconds.',
+            headers={'Retry-After': str(retry_after), 'X-RateLimit-Limit': '5', 'X-RateLimit-Remaining': '0'}
+        )
+    return auth_manager.receive_pairing_request(req.pairing_code, req.dict())
 
 @app.get('/api/auth/status')
 async def auth_status(client_id: str):

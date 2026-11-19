@@ -54,6 +54,10 @@ async def inference_page(request: Request):
 async def pair(req: PairRequest):
     try:
         return await tm_client.request_pairing(req.host_ip, req.port, req.pairing_code)
+    except httpx.HTTPStatusError as e:
+        status_code = e.response.status_code
+        detail = e.response.json().get('detail', e.response.text) if e.response.text else str(e)
+        raise HTTPException(status_code=status_code, detail=detail)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
