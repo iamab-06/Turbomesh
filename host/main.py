@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, HTTPException, Depends, UploadFile, File, 
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import argparse
@@ -16,6 +17,7 @@ from core.jobs import job_manager, STORAGE_DIR
 from core.worker import process_job
 
 app = FastAPI(title='TurboMesh Host')
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 templates = Jinja2Templates(directory='templates')
 
 host_ip = get_lan_ip()

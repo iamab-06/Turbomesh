@@ -9,7 +9,7 @@ from PIL import Image
 
 try:
     import mediapipe as mp
-    from mediapipe.solutions import hands as mp_hands
+    mp_hands = mp.solutions.hands
 except (ImportError, AttributeError):
     print("⚠ MediaPipe not fully imported. Install with: pip install --no-compile mediapipe")
     mp = None
@@ -41,15 +41,41 @@ def extract_hand_landmarks(image_input):
     elif image.shape[2] == 4:
         image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
     
-    # Create hand detector
-    with mp_hands.Hands(
-        static_image_mode=True,
-        max_num_hands=1,
-        min_detection_confidence=0.5
-    ) as hands:
-        # Convert BGR to RGB
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = hands.process(rgb_image)
+    def _try_detect(img_rgb):
+        """img_rgb must be in RGB format."""
+        with mp_hands.Hands(
+            static_image_mode=True,
+            max_num_hands=1,
+            min_detection_confidence=0.3
+        ) as hands:
+            results = hands.process(img_rgb)
+        return results
+    
+    # Try 1: original image (already RGB)
+    results = _try_detect(image)
+    
+    # Try 2: CLAHE contrast enhancement (fixes overexposed images)
+    if not results.multi_hand_landmarks:
+        lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        enhanced = cv2.merge([l, a, b])
+        enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2RGB)
+        results = _try_detect(enhanced)
+    
+    # Try 3: darken overexposed areas
+    if not results.multi_hand_landmarks:
+        darkened = cv2.convertScaleAbs(image, alpha=0.6, beta=-30)
+        results = _try_detect(darkened)
+    
+    # Try 4: gamma correction to recover detail in blown-out highlights
+    if not results.multi_hand_landmarks:
+        gamma = 0.4
+        inv_gamma = 1.0 / gamma
+        table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in range(256)]).astype(np.uint8)
+        gamma_corrected = cv2.LUT(image, table)
+        results = _try_detect(gamma_corrected)
     
     if not results.multi_hand_landmarks:
         return None

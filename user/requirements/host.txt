@@ -12,6 +12,7 @@ numpy
 ultralytics
 imagehash
 scikit-image
+scikit-learn
 pytest
 requests
 httpx

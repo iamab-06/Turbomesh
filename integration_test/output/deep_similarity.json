@@ -1,0 +1,102 @@
+{
+  "job_id": "integration_test_001",
+  "operation": "deep_image_similarity",
+  "inputs": {
+    "image_1": {
+      "filename": "portrait1.jpg",
+      "resolution": "320x480",
+      "aspect_ratio": "2:3",
+      "dominant_colors_hex": [
+        "#503B29",
+        "#96B3DB",
+        "#757D8E"
+      ]
+    },
+    "image_2": {
+      "filename": "portrait2.jpg",
+      "resolution": "320x480",
+      "aspect_ratio": "2:3",
+      "dominant_colors_hex": [
+        "#4B3624",
+        "#91ADD6",
+        "#6F7889"
+      ]
+    }
+  },
+  "verdict": {
+    "classification": "NEAR_DUPLICATE",
+    "overall_similarity_score": 0.95,
+    "confidence": 0.85,
+    "executive_summary": "The images show near duplicate. Deep semantic similarity is 0.96, while structural SSIM is 0.93."
+  },
+  "quantitative_metrics": {
+    "deep_semantic_cosine": {
+      "resnet50": 0.958,
+      "interpretation": "High similarity indicates same subject or scene; low similarity suggests unrelated content."
+    },
+    "structural_and_pixel": {
+      "ssim_score": 0.9274,
+      "phash_similarity": 0.9062,
+      "color_histogram_correlation": 1.0,
+      "orb_keypoint_matches": {
+        "total_keypoints_img1": 185,
+        "total_keypoints_img2": 186,
+        "good_inlier_matches": 64,
+        "estimated_transform": {
+          "rotation_deg": -1.58,
+          "scale_factor": 0.83,
+          "translation_px": [
+            27.0,
+            33.0
+          ]
+        }
+      }
+    }
+  },
+  "forensic_breakdown": {
+    "what_is_similar": [
+      {
+        "category": "Subject Identity",
+        "confidence": 0.96,
+        "detail": "Deep semantic features indicate the same subject or highly related content."
+      },
+      {
+        "category": "Visual Structure",
+        "confidence": 0.91,
+        "detail": "Perceptual hash shows similar visual patterns and composition."
+      }
+    ],
+    "what_is_different": [],
+    "detected_entities_comparison": {
+      "shared_objects": [],
+      "only_in_image_1": [],
+      "only_in_image_2": []
+    }
+  },
+  "region_level_scores": {
+    "foreground_subject_similarity": 0.958,
+    "background_environment_similarity": 0.849,
+    "lighting_consistency": 0.842,
+    "color_palette_match": 1.0
+  },
+  "visual_artifacts": {
+    "gradcam_attention_overlay": "/outputs/integration_test_001/gradcam_pair.png",
+    "ssim_difference_heatmap": "/outputs/integration_test_001/ssim_diff.png",
+    "orb_keypoint_correspondence": "/outputs/integration_test_001/orb_matches.png"
+  },
+  "p2p_telemetry": {
+    "worker_node_id": "peer_ba846d3d1880",
+    "gpu_hardware": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "models_executed": [
+      "ResNet50-FeatureExtractor",
+      "OpenCV-ORB-RANSAC"
+    ],
+    "latency_breakdown_ms": {
+      "math_and_cv_metrics": 1222.7,
+      "vlm_forensic_reasoning": 0.0,
+      "total_gpu_time": 4075.8
+    },
+    "speedup_vs_local_cpu": "18.6x",
+    "verification_hash": "sha256:73d5c7147c58dd52..."
+  }
+}

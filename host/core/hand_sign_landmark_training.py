@@ -75,57 +75,11 @@ class LandmarkDataset:
     def get_data(self):
         """Return features and labels as numpy arrays."""
         if len(self.features) == 0:
-            print("\n⚠ WARNING: No valid landmarks extracted from dataset!")
-            print(f"Attempted to process {sum(len(os.listdir(os.path.join(self.root_dir, c))) for c in self.class_to_idx.keys())} images")
-            print(f"Failed on {len(self.failed_images)} images")
-            print("\nPossible reasons:")
-            print("  1. Images contain hand visualizations (red dots/white lines)")
-            print("  2. Hands are not clearly visible or in poor lighting")
-            print("  3. Hands are partially out of frame or occluded")
-            print("\nTrying fallback: Creating features from image statistics...")
-            
-            # Fallback: create features from image color/texture statistics
-            for class_name in sorted(self.class_to_idx.keys()):
-                class_path = os.path.join(self.root_dir, class_name)
-                image_files = [f for f in os.listdir(class_path) 
-                             if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-                
-                idx = self.class_to_idx[class_name]
-                for img_file in image_files:
-                    try:
-                        img_path = os.path.join(class_path, img_file)
-                        image = Image.open(img_path).convert('RGB')
-                        arr = np.array(image, dtype=np.float32)
-                        
-                        # Create 78 features from image statistics
-                        features_list = [
-                            np.mean(arr[:,:,0]), np.std(arr[:,:,0]),  # Red mean/std
-                            np.mean(arr[:,:,1]), np.std(arr[:,:,1]),  # Green mean/std
-                            np.mean(arr[:,:,2]), np.std(arr[:,:,2]),  # Blue mean/std
-                            np.percentile(arr, 10), np.percentile(arr, 25),  
-                            np.percentile(arr, 50), np.percentile(arr, 75),
-                            np.percentile(arr, 90),  # Percentiles
-                            float(arr.shape[0]), float(arr.shape[1]),  # Dimensions
-                        ]
-                        
-                        # Add color histograms (64 more features to reach 78)
-                        for channel in range(3):
-                            hist, _ = np.histogram(arr[:,:,channel], bins=20)
-                            features_list.extend(hist[:20])
-                        
-                        features = np.array(features_list[:78], dtype=np.float32)
-                        if len(features) < 78:
-                            features = np.pad(features, (0, 78 - len(features)), mode='constant')
-                        
-                        self.features.append(features)
-                        self.labels.append(idx)
-                    except Exception as e:
-                        pass
-            
-            if len(self.features) == 0:
-                raise Exception("Fallback failed: Could not create any features from dataset!")
-            
-            print(f"✓ Created {len(self.features)} fallback features (using color/texture histograms)")
+            raise Exception(
+                f"No hands detected in any training image ({len(self.failed_images)} images failed). "
+                "Please retrain with better lighting: avoid bright/overexposed backgrounds, "
+                "ensure your hand is clearly visible against a plain darker surface."
+            )
         
         X = np.array(self.features, dtype=np.float32)
         y = np.array(self.labels, dtype=np.int32)
@@ -183,6 +137,30 @@ def extract_and_validate_dataset(zip_path, extract_dir):
                         )
                         if has_images:
                             dataset_dir = item_path
+                            break
+                if dataset_dir:
+                    break
+    
+    # If still not found, look two levels deeper (e.g. TopFolder/SubFolder/0/images)
+    if not dataset_dir:
+        for item in root_items:
+            item_path = os.path.join(extract_dir, item)
+            if os.path.isdir(item_path) and not item.startswith('.'):
+                for sub_item in os.listdir(item_path):
+                    sub_path = os.path.join(item_path, sub_item)
+                    if os.path.isdir(sub_path) and not sub_item.startswith('.'):
+                        for deep_item in os.listdir(sub_path):
+                            deep_path = os.path.join(sub_path, deep_item)
+                            if os.path.isdir(deep_path) and not deep_item.startswith('.'):
+                                has_images = any(
+                                    f.lower().endswith(('.jpg', '.jpeg', '.png'))
+                                    for f in os.listdir(deep_path)
+                                    if os.path.isfile(os.path.join(deep_path, f))
+                                )
+                                if has_images:
+                                    dataset_dir = sub_path
+                                    break
+                        if dataset_dir:
                             break
                 if dataset_dir:
                     break

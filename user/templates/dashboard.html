@@ -170,7 +170,7 @@
         select {
             width: 100%;
             padding: 12px 14px;
-            background: rgba(59, 130, 246, 0.05);
+            background: #1e293b;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             color: var(--text-primary);
@@ -759,6 +759,289 @@
             };
         }
 
+        function renderDeepSimilarityUI(container, data, jsonUrl) {
+            const verdict = data.verdict;
+            const metrics = data.quantitative_metrics;
+            const forensic = data.forensic_breakdown;
+            const artifacts = data.visual_artifacts;
+            const telemetry = data.p2p_telemetry;
+            
+            // Classification badge color
+            const classColors = {
+                'NEAR_DUPLICATE': '#10b981',
+                'SAME_SUBJECT_DIFFERENT_POSE_AND_LIGHTING': '#3b82f6',
+                'SAME_SCENE_DIFFERENT_OBJECTS': '#8b5cf6',
+                'RELATED_SCENES': '#f59e0b',
+                'UNRELATED_SCENES': '#ef4444'
+            };
+            const badgeColor = classColors[verdict.classification] || '#6b7280';
+            
+            const html = `
+                <!-- Verdict Header -->
+                <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)); 
+                            border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; 
+                                        letter-spacing: 0.5px; margin-bottom: 8px;">Classification</div>
+                            <div style="display: inline-block; padding: 8px 16px; background: ${badgeColor}22; 
+                                        border: 1px solid ${badgeColor}; border-radius: 6px; 
+                                        color: ${badgeColor}; font-weight: 700; font-size: 0.95rem;">
+                                ${verdict.classification.replace(/_/g, ' ')}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; 
+                                        letter-spacing: 0.5px; margin-bottom: 4px;">Overall Similarity</div>
+                            <div style="font-size: 2.5rem; font-weight: 900; color: ${badgeColor};">
+                                ${Math.round(verdict.overall_similarity_score * 100)}%
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">
+                                Confidence: ${Math.round(verdict.confidence * 100)}%
+                            </div>
+                        </div>
+                    </div>
+                    <div style="color: var(--text-secondary); line-height: 1.6; margin-top: 12px;">
+                        ${verdict.executive_summary}
+                    </div>
+                </div>
+                
+                <!-- Input Images Metadata -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                    <div class="result-item">
+                        <div class="result-title">📷 Image 1</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 8px;">
+                            <strong>${data.inputs.image_1.filename}</strong><br>
+                            ${data.inputs.image_1.resolution} • ${data.inputs.image_1.aspect_ratio}<br>
+                            Colors: ${data.inputs.image_1.dominant_colors_hex.map(c => 
+                                `<span style="display: inline-block; width: 20px; height: 20px; background: ${c}; 
+                                border: 1px solid #fff3; border-radius: 3px; margin: 2px;"></span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-title">📷 Image 2</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 8px;">
+                            <strong>${data.inputs.image_2.filename}</strong><br>
+                            ${data.inputs.image_2.resolution} • ${data.inputs.image_2.aspect_ratio}<br>
+                            Colors: ${data.inputs.image_2.dominant_colors_hex.map(c => 
+                                `<span style="display: inline-block; width: 20px; height: 20px; background: ${c}; 
+                                border: 1px solid #fff3; border-radius: 3px; margin: 2px;"></span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quantitative Metrics -->
+                <div class="result-item" style="margin-bottom: 20px;">
+                    <div class="result-title">📊 Quantitative Metrics</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px;">
+                        <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid var(--border-color); 
+                                    border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">ResNet50 Cosine</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">
+                                ${(metrics.deep_semantic_cosine.resnet50 * 100).toFixed(1)}%
+                            </div>
+                        </div>
+                        ${metrics.deep_semantic_cosine.clip_vit_b32 ? `
+                        <div style="background: rgba(139, 92, 246, 0.05); border: 1px solid var(--border-color); 
+                                    border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">CLIP ViT-B/32</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent);">
+                                ${(metrics.deep_semantic_cosine.clip_vit_b32 * 100).toFixed(1)}%
+                            </div>
+                        </div>` : ''}
+                        <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid var(--border-color); 
+                                    border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">SSIM Score</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);">
+                                ${(metrics.structural_and_pixel.ssim_score * 100).toFixed(1)}%
+                            </div>
+                        </div>
+                        <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid var(--border-color); 
+                                    border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">pHash Similarity</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--warning);">
+                                ${(metrics.structural_and_pixel.phash_similarity * 100).toFixed(1)}%
+                            </div>
+                        </div>
+                        <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid var(--border-color); 
+                                    border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Color Histogram</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #f87171;">
+                                ${(metrics.structural_and_pixel.color_histogram_correlation * 100).toFixed(1)}%
+                            </div>
+                        </div>
+                        <div style="background: rgba(99, 102, 241, 0.05); border: 1px solid var(--border-color); 
+                                    border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">ORB Inliers</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #818cf8;">
+                                ${metrics.structural_and_pixel.orb_keypoint_matches.good_inlier_matches}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Visual Artifacts -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                    <div class="result-item">
+                        <div class="result-title">🔥 Grad-CAM Attention Heatmap</div>
+                        <img class="result-img" src="/api/jobs/${data.job_id}/result/gradcam_pair.png" />
+                    </div>
+                    <div class="result-item">
+                        <div class="result-title">🌡️ SSIM Difference Heatmap</div>
+                        <img class="result-img" src="/api/jobs/${data.job_id}/result/ssim_diff.png" />
+                    </div>
+                    <div class="result-item">
+                        <div class="result-title">🔗 ORB Keypoint Matches</div>
+                        <img class="result-img" src="/api/jobs/${data.job_id}/result/orb_matches.png" />
+                    </div>
+                </div>
+                
+                <!-- Forensic Breakdown -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                    <div class="result-item">
+                        <div class="result-title">✅ What is Similar</div>
+                        ${forensic.what_is_similar.map(item => `
+                            <div style="margin: 12px 0; padding: 12px; background: rgba(16, 185, 129, 0.05); 
+                                        border-left: 3px solid var(--success); border-radius: 4px;">
+                                <div style="font-weight: 600; color: var(--success); margin-bottom: 4px;">
+                                    ${item.category} (${Math.round(item.confidence * 100)}%)
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                    ${item.detail}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="result-item">
+                        <div class="result-title">⚠️ What is Different</div>
+                        ${forensic.what_is_different.map(item => `
+                            <div style="margin: 12px 0; padding: 12px; background: rgba(245, 158, 11, 0.05); 
+                                        border-left: 3px solid var(--warning); border-radius: 4px;">
+                                <div style="font-weight: 600; color: var(--warning); margin-bottom: 4px;">
+                                    ${item.category} <span style="font-size: 0.75rem; padding: 2px 6px; background: rgba(239, 68, 68, 0.2); 
+                                    border-radius: 3px;">${item.severity}</span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                    ${item.detail}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <!-- Entity Diff -->
+                <div class="result-item" style="margin-bottom: 20px;">
+                    <div class="result-title">🔍 Detected Objects Comparison</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px;">
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px;">Shared Objects</div>
+                            ${forensic.detected_entities_comparison.shared_objects.length > 0 ? 
+                                forensic.detected_entities_comparison.shared_objects.map(obj => 
+                                    `<span style="display: inline-block; padding: 4px 8px; margin: 2px; background: rgba(16, 185, 129, 0.1); 
+                                    border: 1px solid var(--success); border-radius: 4px; font-size: 0.8rem;">${obj}</span>`
+                                ).join('') : '<span style="color: var(--text-muted);">None</span>'}
+                        </div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px;">Only in Image 1</div>
+                            ${forensic.detected_entities_comparison.only_in_image_1.length > 0 ? 
+                                forensic.detected_entities_comparison.only_in_image_1.map(obj => 
+                                    `<span style="display: inline-block; padding: 4px 8px; margin: 2px; background: rgba(59, 130, 246, 0.1); 
+                                    border: 1px solid var(--primary); border-radius: 4px; font-size: 0.8rem;">${obj}</span>`
+                                ).join('') : '<span style="color: var(--text-muted);">None</span>'}
+                        </div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px;">Only in Image 2</div>
+                            ${forensic.detected_entities_comparison.only_in_image_2.length > 0 ? 
+                                forensic.detected_entities_comparison.only_in_image_2.map(obj => 
+                                    `<span style="display: inline-block; padding: 4px 8px; margin: 2px; background: rgba(139, 92, 246, 0.1); 
+                                    border: 1px solid var(--accent); border-radius: 4px; font-size: 0.8rem;">${obj}</span>`
+                                ).join('') : '<span style="color: var(--text-muted);">None</span>'}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Region-Level Scores -->
+                <div class="result-item" style="margin-bottom: 20px;">
+                    <div class="result-title">🎯 Region-Level Similarity Scores</div>
+                    <div style="margin-top: 12px;">
+                        ${Object.entries(data.region_level_scores).map(([key, value]) => `
+                            <div style="margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span style="font-size: 0.85rem; color: var(--text-secondary);">
+                                        ${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                    </span>
+                                    <span style="font-weight: 700; color: var(--primary);">
+                                        ${(value * 100).toFixed(1)}%
+                                    </span>
+                                </div>
+                                <div style="width: 100%; height: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 4px; overflow: hidden;">
+                                    <div style="height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); 
+                                                width: ${value * 100}%; transition: width 0.3s ease;"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <!-- P2P Telemetry -->
+                <div class="result-item">
+                    <div class="result-title">⚡ P2P GPU Telemetry</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px;">
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Worker Node</div>
+                            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); font-family: monospace;">
+                                ${telemetry.worker_node_id}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">GPU Hardware</div>
+                            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">
+                                ${telemetry.gpu_hardware}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Total GPU Time</div>
+                            <div style="font-size: 1.25rem; font-weight: 700; color: var(--success);">
+                                ${telemetry.latency_breakdown_ms.total_gpu_time.toFixed(0)}ms
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Speedup vs CPU</div>
+                            <div style="font-size: 1.25rem; font-weight: 700; color: var(--accent);">
+                                ${telemetry.speedup_vs_local_cpu}
+                            </div>
+                        </div>
+                    </div>
+                    <details style="margin-top: 12px;">
+                        <summary style="cursor: pointer; color: var(--primary); font-weight: 600; font-size: 0.85rem;">
+                            View Models Executed & Verification Hash
+                        </summary>
+                        <div style="margin-top: 8px; padding: 12px; background: var(--dark-bg); border-radius: 6px; 
+                                    font-family: monospace; font-size: 0.8rem; color: var(--text-secondary);">
+                            <div><strong>Models:</strong> ${telemetry.models_executed.join(', ')}</div>
+                            <div style="margin-top: 6px;"><strong>Verification:</strong> ${telemetry.verification_hash}</div>
+                        </div>
+                    </details>
+                </div>
+                
+                <!-- Raw JSON -->
+                <details style="margin-top: 20px;">
+                    <summary style="cursor: pointer; padding: 12px; background: rgba(59, 130, 246, 0.05); 
+                                    border: 1px solid var(--border-color); border-radius: 8px; color: var(--primary); 
+                                    font-weight: 600;">
+                        View Raw JSON Response
+                    </summary>
+                    <div class="result-json" style="margin-top: 12px;">
+                        ${JSON.stringify(data, null, 2)}
+                    </div>
+                </details>
+            `;
+            
+            container.innerHTML += html;
+        }
+
         async function fetchAndDisplayResults(jobId, files, hostIp, token) {
             const resultsArea = document.getElementById('results-area');
             const content = document.getElementById('result-content');
@@ -767,6 +1050,7 @@
             
             let metadata = null;
             let modelFile = null;
+            let deepSimilarityData = null;
             
             console.log('Processing result files:', files);
             
@@ -779,6 +1063,13 @@
                     
                     console.log('JSON file:', file, data);
                     
+                    // Check if this is deep similarity JSON
+                    if (file === 'deep_similarity.json' && data.operation === 'deep_image_similarity') {
+                        deepSimilarityData = data;
+                        renderDeepSimilarityUI(content, data, url);
+                        continue;
+                    }
+                    
                     // Check if this is hand sign metadata
                     if (file.includes('metadata') && data.classes && data.model_architecture) {
                         metadata = data;
@@ -786,12 +1077,15 @@
                         console.log('✓ Hand sign metadata detected:', metadata);
                     }
                     
-                    content.innerHTML += `
-                        <div class="result-item">
-                            <div class="result-title">📄 ${file}</div>
-                            <div class="result-json">${JSON.stringify(data, null, 2)}</div>
-                        </div>`;
-                } else if (file.endsWith('.pt')) {
+                    // For non-deep-similarity JSON, show standard view
+                    if (!deepSimilarityData) {
+                        content.innerHTML += `
+                            <div class="result-item">
+                                <div class="result-title">📄 ${file}</div>
+                                <div class="result-json">${JSON.stringify(data, null, 2)}</div>
+                            </div>`;
+                    }
+                } else if (file.endsWith('.pt') || file.endsWith('.pkl')) {
                     modelFile = file;
                     console.log('✓ Model file detected:', modelFile);
                     content.innerHTML += `
@@ -800,11 +1094,14 @@
                             <div style="color: var(--text-muted); font-size: 0.9rem;">Trained model file</div>
                         </div>`;
                 } else if (file.match(/\.(jpg|jpeg|png)$/i)) {
-                    content.innerHTML += `
-                        <div class="result-item">
-                            <div class="result-title">🖼️ ${file}</div>
-                            <img class="result-img" src="${url}" />
-                        </div>`;
+                    // Skip images if deep similarity (they're handled in custom UI)
+                    if (!deepSimilarityData) {
+                        content.innerHTML += `
+                            <div class="result-item">
+                                <div class="result-title">🖼️ ${file}</div>
+                                <img class="result-img" src="${url}" />
+                            </div>`;
+                    }
                 }
             }
             
@@ -820,36 +1117,45 @@
                             ⏳ Loading trained model for real-time detection...
                         </div>
                         <div id="camera-container" style="display: none;">
-                            <div class="result-title">📹 Real-Time Hand Sign Detection</div>
-                            <video id="webcam" autoplay playsinline style="width: 100%; border-radius: 12px; background: #000; margin: 16px 0;"></video>
-                            <canvas id="canvas" style="display: none;"></canvas>
-                            <div id="camera-status" style="padding: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #86efac; border-radius: 8px; margin-bottom: 12px; text-align: center;">
-                                Starting camera...
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                <span style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">Real-Time Hand Sign Detection</span>
                             </div>
-                            <div id="prediction-display" style="background: rgba(59, 130, 246, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px;">
-                                <div style="font-size: 0.875rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Detected Sign</div>
-                                <div id="detected-sign" style="font-size: 2rem; font-weight: 700; color: var(--success); text-align: center;">—</div>
-                                <div style="margin-top: 12px;">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.875rem;">
-                                        <span style="color: var(--text-muted);">Confidence</span>
-                                        <span id="confidence-text" style="color: var(--text-primary); font-weight: 700;">0%</span>
-                                    </div>
-                                    <div style="width: 100%; height: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 4px; overflow: hidden;">
-                                        <div id="confidence-bar" style="height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s ease; border-radius: 4px;"></div>
+                            <div style="display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start;">
+                                <div>
+                                    <video id="webcam" autoplay playsinline style="width: 100%; border-radius: 14px; background: #000; display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.4);"></video>
+                                    <canvas id="canvas" style="display: none;"></canvas>
+                                    <div id="camera-status" style="padding: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #86efac; border-radius: 10px; margin-top: 14px; text-align: center; font-weight: 500;">
+                                        Starting camera...
                                     </div>
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
-                                    <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center;">
-                                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">FPS</div>
-                                        <div id="fps-display" style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">0</div>
+                                <div style="position: sticky; top: 20px; background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 16px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+                                    <div style="text-align: center; margin-bottom: 20px;">
+                                        <div style="font-size: 0.7rem; color: rgba(148,163,184,0.8); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">Detected Sign</div>
+                                        <div id="detected-sign" style="font-size: 5rem; font-weight: 900; color: #86efac; line-height: 1;">—</div>
                                     </div>
-                                    <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center;">
-                                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Inference</div>
-                                        <div id="inference-time" style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">0ms</div>
+                                    <div style="margin: 20px 0;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                            <span style="color: rgba(148,163,184,0.8); font-size: 0.875rem;">Confidence</span>
+                                            <span id="confidence-text" style="color: #e2e8f0; font-weight: 700; font-size: 1.1rem;">0%</span>
+                                        </div>
+                                        <div style="width: 100%; height: 10px; background: rgba(15,23,42,0.6); border-radius: 6px; overflow: hidden;">
+                                            <div id="confidence-bar" style="height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899); width: 0%; transition: width 0.3s ease;"></div>
+                                        </div>
                                     </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
+                                        <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 10px; padding: 14px; text-align: center;">
+                                            <div style="font-size: 0.65rem; color: rgba(148,163,184,0.7); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">FPS</div>
+                                            <div id="fps-display" style="font-size: 1.75rem; font-weight: 900; color: #60a5fa;">0</div>
+                                        </div>
+                                        <div style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3); border-radius: 10px; padding: 14px; text-align: center;">
+                                            <div style="font-size: 0.65rem; color: rgba(148,163,184,0.7); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Latency</div>
+                                            <div id="inference-time" style="font-size: 1.75rem; font-weight: 900; color: #c084fc;">0ms</div>
+                                        </div>
+                                    </div>
+                                    <button id="camera-btn" onclick="toggleCamera()" style="margin-top: 20px; width: 100%; padding: 14px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 16px rgba(59,130,246,0.4); text-transform: uppercase; letter-spacing: 1px;">START CAMERA</button>
                                 </div>
                             </div>
-                            <button id="camera-btn" onclick="toggleCamera()" style="margin-top: 12px; width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">START CAMERA</button>
                         </div>
                     </div>`;
                 
@@ -931,7 +1237,8 @@
                 document.getElementById('camera-status').style.background = 'rgba(16, 185, 129, 0.1)';
                 document.getElementById('camera-status').style.borderColor = 'rgba(16, 185, 129, 0.3)';
                 document.getElementById('camera-status').style.color = '#86efac';
-                console.log('Model ready, user can click START CAMERA');
+                console.log('✓ Model ready, auto-starting camera...');
+                setTimeout(() => startHandSignDetection(), 500);
                 
             } catch (error) {
                 console.error('❌ Error in loadModelAndStartCamera:', error);

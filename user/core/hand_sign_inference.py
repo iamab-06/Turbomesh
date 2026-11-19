@@ -10,10 +10,11 @@ from PIL import Image
 from typing import Optional, Tuple
 
 try:
-    import mediapipe as mp
-    from mediapipe.solutions import hands as mp_hands
-except ImportError:
-    print("⚠ MediaPipe not fully imported. Install with: pip install --no-compile mediapipe")
+    import mediapipe
+    mp = mediapipe
+    mp_hands = mediapipe.solutions.hands
+except (ImportError, AttributeError) as e:
+    print(f"⚠ MediaPipe not fully imported: {e}")
     mp = None
     mp_hands = None
 
@@ -50,14 +51,31 @@ def extract_hand_landmarks_from_frame(frame):
     """
     detector = initialize_hand_detector()
     
-    # Convert BGR to RGB
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = detector.process(rgb_frame)
+    def _try_detect(img):
+        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        return detector.process(rgb)
+    
+    # Try 1: original frame
+    results = _try_detect(frame)
+    
+    # Try 2: CLAHE contrast enhancement (fixes overexposed/bright environments)
+    if not results.multi_hand_landmarks:
+        lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        enhanced = cv2.merge([l, a, b])
+        enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
+        results = _try_detect(enhanced)
+    
+    # Try 3: darken overexposed frame
+    if not results.multi_hand_landmarks:
+        darkened = cv2.convertScaleAbs(frame, alpha=0.6, beta=-30)
+        results = _try_detect(darkened)
     
     if not results.multi_hand_landmarks:
         return None
     
-    # Extract landmarks from first detected hand
     hand_landmarks = results.multi_hand_landmarks[0]
     landmarks = np.array([
         [lm.x, lm.y, lm.z] for lm in hand_landmarks.landmark

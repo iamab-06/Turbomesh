@@ -110,19 +110,9 @@ def get_image_embedding(img_path):
     return emb
 
 def run_image_similarity(job, input_dir, output_dir):
-    files = list(job['files'].keys())
-    if len(files) != 2: raise Exception('Image Similarity requires exactly 2 images')
-    img1_path, img2_path = os.path.join(input_dir, files[0]), os.path.join(input_dir, files[1])
-    img1_pil, img2_pil = Image.open(img1_path).convert('L').resize((256, 256)), Image.open(img2_path).convert('L').resize((256, 256))
-    ssim_val = ssim(np.array(img1_pil), np.array(img2_pil), data_range=255)
-    phash_sim = max(0.0, 1.0 - ((imagehash.phash(Image.open(img1_path)) - imagehash.phash(Image.open(img2_path))) / 64.0))
-    cos = nn.CosineSimilarity(dim=0)
-    resnet_sim = cos(get_image_embedding(img1_path), get_image_embedding(img2_path)).item()
-    overall = (ssim_val * 0.3) + (phash_sim * 0.3) + (resnet_sim * 0.4)
-    cls = 'HIGHLY_SIMILAR' if overall > 0.90 else ('SIMILAR' if overall > 0.75 else 'DIFFERENT')
-    res = {'operation': 'image_similarity', 'image_1': files[0], 'image_2': files[1], 'ssim_score': round(float(ssim_val), 4), 'phash_similarity': round(float(phash_sim), 4), 'resnet_similarity': round(float(resnet_sim), 4), 'overall_similarity': round(float(overall), 4), 'classification': cls, 'processing_device': DEVICE}
-    with open(os.path.join(output_dir, 'similarity.json'), 'w') as f: json.dump(res, f, indent=4)
-    return ['similarity.json']
+    """Route to deep forensic image similarity pipeline"""
+    from core.deep_similarity import run_deep_image_similarity
+    return run_deep_image_similarity(job, input_dir, output_dir)
 
 
 def run_hand_sign_detection(job, input_dir, output_dir):
