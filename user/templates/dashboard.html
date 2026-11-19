@@ -1075,8 +1075,53 @@
                         metadata = data;
                         localStorage.setItem('handSignModels', JSON.stringify([data]));
                         console.log('✓ Hand sign metadata detected:', metadata);
+                        continue; // Hide raw metadata JSON from results
                     }
                     
+                    // Object Detection Analytics UI
+                    if (!deepSimilarityData && file === 'analytics.json' && data.operation === 'object_detection') {
+                        const totalObjects = Object.values(data.object_counts || {}).reduce((a, b) => a + b, 0);
+                        const hasVehicles = (data.total_vehicles || 0) > 0;
+                        const objectBadges = Object.entries(data.object_counts || {}).map(([name, count]) => `
+                            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; margin: 4px; background: rgba(59, 130, 246, 0.12); border: 1px solid var(--primary); border-radius: 8px; font-size: 0.9rem; font-weight: 500; color: #93c5fd;">
+                                <span>${name}</span>
+                                <span style="background: var(--primary); color: white; padding: 2px 7px; border-radius: 10px; font-size: 0.75rem; font-weight: 700;">${count}</span>
+                            </span>
+                        `).join('');
+
+                        let vehicleSection = '';
+                        if (hasVehicles) {
+                            vehicleSection = `
+                                <div style="margin-top: 16px; padding: 12px; background: rgba(245, 158, 11, 0.08); border-left: 3px solid var(--warning); border-radius: 6px;">
+                                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--warning); margin-bottom: 6px;">🚗 Traffic & Vehicle Analytics</div>
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                        Total Vehicles: <b>${data.total_vehicles}</b> | License Plates Detected: <b>${data.license_plates_detected}</b>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        content.innerHTML += `
+                            <div class="result-item" style="margin-top: 18px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                    <div class="result-title" style="margin-bottom: 0;">🎯 Detection Analytics</div>
+                                    <span style="font-size: 0.8rem; padding: 3px 10px; background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: #86efac; border-radius: 20px; font-weight: 600;">
+                                        ${totalObjects} Total Objects (${(data.processing_device || 'CPU').toUpperCase()})
+                                    </span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Detected Classes & Quantities:</div>
+                                <div style="display: flex; flex-wrap: wrap; margin-bottom: 10px;">
+                                    ${objectBadges || '<span style="color: var(--text-muted); font-size: 0.85rem;">No objects detected</span>'}
+                                </div>
+                                ${vehicleSection}
+                                <details style="margin-top: 14px; font-size: 0.8rem; color: var(--text-muted);">
+                                    <summary style="cursor: pointer; color: var(--primary); font-weight: 500;">View Raw Analytics JSON</summary>
+                                    <div class="result-json" style="margin-top: 8px;">${JSON.stringify(data, null, 2)}</div>
+                                </details>
+                            </div>`;
+                        continue;
+                    }
+
                     // For non-deep-similarity JSON, show standard view
                     if (!deepSimilarityData) {
                         content.innerHTML += `
