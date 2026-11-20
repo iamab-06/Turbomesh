@@ -16,3 +16,5 @@ scikit-learn
 pytest
 requests
 httpx
+diffusers==0.29.2
+accelerate==0.34.2

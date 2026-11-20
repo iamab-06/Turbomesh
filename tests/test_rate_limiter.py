@@ -1,13 +1,17 @@
 import pytest
 import time
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../host')))
 from fastapi.testclient import TestClient
-from host.main import app
-from host.core.rate_limiter import pairing_rate_limiter
+from main import app
+from core.rate_limiter import pairing_rate_limiter
 
 client = TestClient(app)
 
-def setup_function():
-    # Reset limiter history before test
+@pytest.fixture(autouse=True)
+def reset_limiter_fixture():
+    # Reset limiter history before every test
     pairing_rate_limiter.reset()
 
 def test_rate_limiter_allows_up_to_limit():

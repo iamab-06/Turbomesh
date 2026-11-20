@@ -25,7 +25,7 @@ host_ip = get_lan_ip()
 hardware_info = get_hardware_info()
 
 class PairRequest(BaseModel): pairing_code: str; client_id: str; device_name: str; os: str; app_version: str
-class JobCreateRequest(BaseModel): operation: str
+class JobCreateRequest(BaseModel): operation: str; prompt: str = None; params: dict = None
 class FinalizeUploadRequest(BaseModel): filename: str; total_chunks: int; expected_size: int; expected_sha256: str
 
 @app.get('/')
@@ -72,7 +72,13 @@ async def get_host_info():
     return {'ip': host_ip, 'hardware': hw}
 
 @app.post('/api/jobs')
-async def create_job(req: JobCreateRequest, client_id: str = Depends(get_current_client)): return job_manager.create_job(client_id, req.operation)
+async def create_job(req: JobCreateRequest, background_tasks: BackgroundTasks, client_id: str = Depends(get_current_client)):
+    job = job_manager.create_job(client_id, req.operation, prompt=req.prompt, params=req.params)
+    if req.operation == 'image_generation':
+        job['status'] = 'PENDING'
+        job['stage'] = 'Queued for image generation'
+        background_tasks.add_task(process_job, job['job_id'])
+    return job
 
 @app.get('/api/jobs/{job_id}')
 async def get_job(job_id: str, client_id: str = Depends(get_current_client)): return job_manager.get_job(job_id, client_id)
@@ -92,7 +98,8 @@ async def finalize_upload(job_id: str, req: FinalizeUploadRequest, background_ta
         'object_detection': 1,
         'image_similarity': 2,
         'hand_sign_recognition': 1,
-        'hand_sign_detection': 1
+        'hand_sign_detection': 1,
+        'image_generation': 0
     }
     required = required_files.get(job['operation'], 1)
     

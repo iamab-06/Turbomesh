@@ -12,7 +12,7 @@ class JobManager:
         if not os.path.exists(STORAGE_DIR):
             os.makedirs(STORAGE_DIR)
             
-    def create_job(self, client_id: str, operation: str):
+    def create_job(self, client_id: str, operation: str, prompt: str = None, params: dict = None):
         job_id = f'job_{uuid.uuid4().hex}'
         
         job_dir = os.path.join(STORAGE_DIR, job_id)
@@ -24,9 +24,11 @@ class JobManager:
             'job_id': job_id,
             'client_id': client_id,
             'operation': operation,
+            'prompt': prompt,
+            'params': params or {},
             'status': 'CREATED',
             'progress': 0,
-            'stage': 'Waiting for files',
+            'stage': 'Waiting for files' if operation != 'image_generation' else 'Queued for image generation',
             'files': {},
             'created_at': time.time(),
             'result': None

@@ -3,6 +3,7 @@ import traceback
 from core.jobs import job_manager, STORAGE_DIR
 from core.processing import run_object_detection, run_image_similarity, run_hand_sign_detection
 from core.hand_sign_landmark_training import run_hand_sign_recognition
+from core.image_generation import run_image_generation
 import os
 
 async def process_job(job_id: str):
@@ -29,6 +30,10 @@ async def process_job(job_id: str):
         elif job['operation'] == 'hand_sign_detection':
             job['stage'] = 'Processing image for hand sign detection'
             result_files = await asyncio.to_thread(run_hand_sign_detection, job, input_dir, output_dir)
+        elif job['operation'] == 'image_generation':
+            job['stage'] = 'Synthesizing image from prompt'
+            job['progress'] = 30
+            result_files = await asyncio.to_thread(run_image_generation, job, input_dir, output_dir)
         else:
             raise Exception('Unknown operation')
             

@@ -167,7 +167,8 @@
 
         input[type="text"],
         input[type="number"],
-        select {
+        select,
+        textarea {
             width: 100%;
             padding: 12px 14px;
             background: #1e293b;
@@ -181,11 +182,31 @@
 
         input[type="text"]:focus,
         input[type="number"]:focus,
-        select:focus {
+        select:focus,
+        textarea:focus {
             outline: none;
             border-color: var(--primary);
             background: rgba(59, 130, 246, 0.08);
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .prompt-chip {
+            display: inline-block;
+            padding: 5px 12px;
+            margin: 3px;
+            background: rgba(139, 92, 246, 0.12);
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            border-radius: 16px;
+            font-size: 0.78rem;
+            color: #c4b5fd;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .prompt-chip:hover {
+            background: rgba(139, 92, 246, 0.25);
+            border-color: var(--accent);
+            transform: translateY(-1px);
         }
 
         input[type="file"] {
@@ -471,6 +492,7 @@
                             <option value="object_detection">Object Detection & Image Analytics</option>
                             <option value="image_similarity">Image Similarity / Duplicate Detection</option>
                             <option value="hand_sign_recognition">Hand Sign Recognition - Train Model</option>
+                            <option value="image_generation">🎨 AI Image Generation (Prompt-to-Image)</option>
                         </select>
                     </div>
 
@@ -524,17 +546,39 @@
         let authToken = null;
         let hostUrl = null;
 
+        function setPrompt(text, style) {
+            const promptInput = document.getElementById('image-prompt');
+            if (promptInput) {
+                promptInput.value = text;
+            }
+            if (style) {
+                const styleSelect = document.getElementById('image-style');
+                if (styleSelect) styleSelect.value = style;
+            }
+        }
+
+        function toggleEngineOptions() {
+            const eng = document.getElementById('image-engine')?.value;
+            const modelGrp = document.getElementById('model-group');
+            if (modelGrp) {
+                modelGrp.style.display = (eng === 'stable-diffusion') ? 'block' : 'none';
+            }
+        }
+
         function updateFileInputs() {
             const op = document.getElementById('operation').value;
             const container = document.getElementById('file-inputs');
+            const startBtn = document.getElementById('start-job-btn');
             
             if (op === 'object_detection' || op === 'hand_sign_detection') {
+                startBtn.innerText = 'Create Job & Upload';
                 container.innerHTML = `
                     <div class="form-group">
                         <label for="file1">Image File</label>
                         <input type="file" id="file1" accept="image/*" />
                     </div>`;
             } else if (op === 'image_similarity') {
+                startBtn.innerText = 'Create Job & Upload';
                 container.innerHTML = `
                     <div class="form-group">
                         <label for="file1">First Image</label>
@@ -545,10 +589,71 @@
                         <input type="file" id="file2" accept="image/*" />
                     </div>`;
             } else if (op === 'hand_sign_recognition') {
+                startBtn.innerText = 'Create Job & Upload';
                 container.innerHTML = `
                     <div class="form-group">
                         <label for="file1">Dataset ZIP File</label>
                         <input type="file" id="file1" accept=".zip" />
+                    </div>`;
+            } else if (op === 'image_generation') {
+                startBtn.innerText = '🎨 Generate Image on Host';
+                container.innerHTML = `
+                    <div class="form-group">
+                        <label for="image-prompt">Image Prompt</label>
+                        <textarea id="image-prompt" rows="3" placeholder="Describe the image you want the host GPU to generate... e.g. Highly detailed cinematic cyberpunk street at night, neon reflections, 8k resolution"></textarea>
+                        <div style="margin-top: 8px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase;">Inspiration Presets:</div>
+                            <span class="prompt-chip" onclick="setPrompt('Highly detailed cyberpunk neon metropolis with futuristic skyscrapers, rain-slicked streets and glowing holograms, cinematic 8k', 'cyberpunk')">🏙️ Cyberpunk City</span>
+                            <span class="prompt-chip" onclick="setPrompt('Deep space cosmic nebula with luminous planetary rings, distant galaxies and stellar dust, photorealistic', 'space')">🌌 Deep Space</span>
+                            <span class="prompt-chip" onclick="setPrompt('Breathtaking sunset over tropical ocean waves, golden sun reflections on water, dramatic colorful sky', 'sunset')">🌅 Sunset Horizon</span>
+                            <span class="prompt-chip" onclick="setPrompt('Ancient enchanted mystical forest with giant glowing mushrooms, mossy trees and ethereal sunbeams', 'nature')">🌲 Emerald Forest</span>
+                            <span class="prompt-chip" onclick="setPrompt('80s retro synthwave highway towards an immense radiant neon sun with wireframe grid mountains', 'synthwave')">⚡ Retro Synthwave</span>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+                        <div class="form-group">
+                            <label for="image-engine">Generation Engine</label>
+                            <select id="image-engine" onchange="toggleEngineOptions()">
+                                <option value="stable-diffusion">🚀 Stable Diffusion Turbo (Photo-Realistic)</option>
+                                <option value="instant-neural">⚡ TurboMesh Neural Latent Art (Ultra-Fast 0.5s)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="model-group">
+                            <label for="image-model">SD Model</label>
+                            <select id="image-model">
+                                <option value="stabilityai/sd-turbo">SD-Turbo (Single-step Realtime, Fast)</option>
+                                <option value="runwayml/stable-diffusion-v1-5">Stable Diffusion v1.5 (Standard)</option>
+                                <option value="segmind/SSD-1B">SSD-1B (Distilled SDXL 1B)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+                        <div class="form-group">
+                            <label for="image-style">Artistic Style</label>
+                            <select id="image-style">
+                                <option value="cinematic">Cinematic / Photorealistic</option>
+                                <option value="cyberpunk">Cyberpunk / Neon</option>
+                                <option value="space">Cosmic / Space</option>
+                                <option value="sunset">Sunset / Golden Hour</option>
+                                <option value="nature">Nature / Landscape</option>
+                                <option value="ocean">Oceanic / Water</option>
+                                <option value="synthwave">Retro / Synthwave</option>
+                                <option value="fantasy">Mystic Fantasy</option>
+                                <option value="monochrome">Noir / Monochrome</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="image-dim">Resolution</label>
+                            <select id="image-dim">
+                                <option value="512x512">512 × 512 (Standard Square)</option>
+                                <option value="768x512">768 × 512 (Landscape)</option>
+                                <option value="512x768">512 × 768 (Portrait)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 8px;">
+                        <label for="image-seed">Seed (Optional)</label>
+                        <input type="number" id="image-seed" placeholder="Leave empty for random seed" />
                     </div>`;
             }
         }
@@ -663,6 +768,53 @@
             jsb.style.display = 'block';
             document.getElementById('results-area').style.display = 'none';
             document.getElementById('process-progress').style.display = 'none';
+            
+            if (op === 'image_generation') {
+                const prompt = document.getElementById('image-prompt')?.value.trim();
+                if (!prompt) {
+                    jsb.className = 'status-message status-error';
+                    jsb.innerText = '✗ Please enter a prompt for image generation.';
+                    return;
+                }
+                const engine = document.getElementById('image-engine')?.value || 'stable-diffusion';
+                const model_id = document.getElementById('image-model')?.value || 'stabilityai/sd-turbo';
+                const style = document.getElementById('image-style')?.value;
+                const dim = (document.getElementById('image-dim')?.value || '512x512').split('x');
+                const width = parseInt(dim[0]) || 512;
+                const height = parseInt(dim[1]) || 512;
+                const seedVal = document.getElementById('image-seed')?.value;
+                const seed = seedVal ? parseInt(seedVal) : null;
+
+                document.getElementById('start-job-btn').disabled = true;
+                jsb.className = 'status-message status-pending';
+                jsb.innerText = '⏳ Submitting prompt to Host GPU...';
+
+                try {
+                    const res = await fetch('/api/jobs', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            operation: op,
+                            prompt: prompt,
+                            params: { engine, model_id, style, width, height, seed }
+                        })
+                    });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.detail || 'Job creation failed');
+                    }
+                    const job = await res.json();
+                    
+                    document.getElementById('upload-progress').style.display = 'none';
+                    jsb.innerText = '⏳ Host is synthesizing image from prompt...';
+                    monitorJob(job.job_id);
+                } catch (e) {
+                    jsb.className = 'status-message status-error';
+                    jsb.innerText = '✗ Error: ' + e.message;
+                    document.getElementById('start-job-btn').disabled = false;
+                }
+                return;
+            }
             
             if (op === 'object_detection' && !file1) { 
                 jsb.className = 'status-message status-error'; 
@@ -1042,6 +1194,108 @@
             container.innerHTML += html;
         }
 
+        function setNewSeedAndRegenerate() {
+            const seedInput = document.getElementById('image-seed');
+            if (seedInput) {
+                seedInput.value = Math.floor(Math.random() * 1000000);
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            startJob();
+        }
+
+        function renderImageGenerationUI(container, data, imageUrl, jsonUrl, jobId) {
+            const promptText = data.prompt || 'No prompt specified';
+            const deviceText = (data.device || 'GPU').toUpperCase();
+            const styleText = (data.style || 'Cinematic').toUpperCase();
+            const genTime = data.generation_time_seconds ? `${data.generation_time_seconds}s` : 'Fast';
+            const resolution = `${data.width || 512} × ${data.height || 512}`;
+            const seedVal = data.seed !== undefined ? data.seed : 'Auto';
+            const generator = data.generator || (data.engine === 'stable-diffusion' ? 'Stable Diffusion' : 'TurboMesh Neural Latent Art Engine');
+            const engineLabel = data.engine === 'stable-diffusion' ? '🚀 Stable Diffusion' : '⚡ PyTorch Latent';
+
+            let fallbackNotice = '';
+            if (data.fallback_reason) {
+                fallbackNotice = `
+                    <div style="margin-bottom: 14px; padding: 10px 14px; background: rgba(245, 158, 11, 0.12); border-left: 3px solid var(--warning); border-radius: 6px; font-size: 0.82rem; color: #fde68a;">
+                        ℹ️ <b>Notice:</b> ${data.fallback_reason}
+                    </div>
+                `;
+            }
+
+            const html = `
+                <div class="result-item" style="border: 1px solid rgba(139, 92, 246, 0.4); background: rgba(30, 41, 59, 0.85); border-radius: 12px; padding: 22px; box-shadow: 0 10px 30px rgba(139, 92, 246, 0.15);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #c4b5fd; display: flex; align-items: center; gap: 8px;">
+                            <span>🎨</span> AI Generated Image
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <span style="font-size: 0.75rem; padding: 4px 10px; background: rgba(59, 130, 246, 0.15); border: 1px solid var(--primary); color: #93c5fd; border-radius: 20px; font-weight: 600;">
+                                ⚡ ${deviceText}
+                            </span>
+                            <span style="font-size: 0.75rem; padding: 4px 10px; background: rgba(139, 92, 246, 0.15); border: 1px solid var(--accent); color: #c4b5fd; border-radius: 20px; font-weight: 600;">
+                                🎭 ${styleText}
+                            </span>
+                            <span style="font-size: 0.75rem; padding: 4px 10px; background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: #86efac; border-radius: 20px; font-weight: 600;">
+                                ⏱ ${genTime}
+                            </span>
+                        </div>
+                    </div>
+
+                    ${fallbackNotice}
+
+                    <!-- Prompt Display -->
+                    <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 18px;">
+                        <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px; margin-bottom: 6px;">Prompt</div>
+                        <div style="font-size: 0.95rem; color: var(--text-primary); line-height: 1.5; font-style: italic;">
+                            "${promptText}"
+                        </div>
+                    </div>
+
+                    <!-- Generated Image Preview -->
+                    <div style="text-align: center; margin-bottom: 18px;">
+                        <a href="${imageUrl}" target="_blank" title="Click to view full image in new tab">
+                            <img src="${imageUrl}" alt="Generated Image" style="max-width: 100%; max-height: 520px; border-radius: 10px; border: 1px solid rgba(139, 92, 246, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.01)'" onmouseout="this.style.transform='scale(1)'"/>
+                        </a>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Click image to view or save full resolution</div>
+                    </div>
+
+                    <!-- Specs Breakdown -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 18px;">
+                        <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Resolution</div>
+                            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">${resolution}</div>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Seed</div>
+                            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">${seedVal}</div>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Engine</div>
+                            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${generator}">${engineLabel}</div>
+                        </div>
+                    </div>
+
+                    <!-- Action Controls -->
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <a href="${imageUrl}" download="turbomesh_generated_${seedVal}.png" style="text-decoration: none; flex: 1;">
+                            <button type="button" class="btn-primary" style="margin-top: 0; background: linear-gradient(135deg, #3b82f6, #8b5cf6);">
+                                📥 Download Image
+                            </button>
+                        </a>
+                        <button type="button" class="btn-secondary" style="flex: 1;" onclick="setNewSeedAndRegenerate()">
+                            🔄 Generate Variation
+                        </button>
+                    </div>
+
+                    <details style="margin-top: 16px; font-size: 0.8rem; color: var(--text-muted);">
+                        <summary style="cursor: pointer; color: var(--accent); font-weight: 500;">View Generation Metadata JSON</summary>
+                        <div class="result-json" style="margin-top: 8px;">${JSON.stringify(data, null, 2)}</div>
+                    </details>
+                </div>
+            `;
+            container.innerHTML += html;
+        }
+
         async function fetchAndDisplayResults(jobId, files, hostIp, token) {
             const resultsArea = document.getElementById('results-area');
             const content = document.getElementById('result-content');
@@ -1051,6 +1305,7 @@
             let metadata = null;
             let modelFile = null;
             let deepSimilarityData = null;
+            let imageGenData = null;
             
             console.log('Processing result files:', files);
             
@@ -1062,6 +1317,13 @@
                     const data = await res.json();
                     
                     console.log('JSON file:', file, data);
+
+                    // Check if this is image generation metadata
+                    if (file === 'generation_metadata.json' || data.operation === 'image_generation') {
+                        imageGenData = data;
+                        renderImageGenerationUI(content, data, `/api/jobs/${jobId}/result/generated_image.png`, url, jobId);
+                        continue;
+                    }
                     
                     // Check if this is deep similarity JSON
                     if (file === 'deep_similarity.json' && data.operation === 'deep_image_similarity') {
@@ -1139,8 +1401,8 @@
                             <div style="color: var(--text-muted); font-size: 0.9rem;">Trained model file</div>
                         </div>`;
                 } else if (file.match(/\.(jpg|jpeg|png)$/i)) {
-                    // Skip images if deep similarity (they're handled in custom UI)
-                    if (!deepSimilarityData) {
+                    // Skip images if deep similarity or image generation (they're handled in custom UI)
+                    if (!deepSimilarityData && !imageGenData) {
                         content.innerHTML += `
                             <div class="result-item">
                                 <div class="result-title">🖼️ ${file}</div>

@@ -29,6 +29,15 @@ class PairRequest(BaseModel):
 
 class JobCreateReq(BaseModel):
     operation: str
+    prompt: str = None
+    params: dict = None
+
+class GenerateImageReq(BaseModel):
+    prompt: str
+    style: str = None
+    width: int = 512
+    height: int = 512
+    seed: int = None
 
 class FinalizeReq(BaseModel):
     filename: str
@@ -71,8 +80,29 @@ async def status():
 async def create_job(req: JobCreateReq):
     if not tm_client.token: raise HTTPException(status_code=401, detail='Not authenticated')
     headers = {'Authorization': f'Bearer {tm_client.token}'}
+    payload = {'operation': req.operation}
+    if req.prompt is not None:
+        payload['prompt'] = req.prompt
+    if req.params is not None:
+        payload['params'] = req.params
     async with httpx.AsyncClient() as client:
-        res = await client.post(f'{tm_client.host_url}/api/jobs', json={'operation': req.operation}, headers=headers)
+        res = await client.post(f'{tm_client.host_url}/api/jobs', json=payload, headers=headers)
+        res.raise_for_status()
+        return res.json()
+
+@app.post('/api/generate')
+async def generate_image(req: GenerateImageReq):
+    if not tm_client.token: raise HTTPException(status_code=401, detail='Not authenticated')
+    headers = {'Authorization': f'Bearer {tm_client.token}'}
+    params = {'style': req.style, 'width': req.width, 'height': req.height}
+    if req.seed is not None:
+        params['seed'] = req.seed
+    async with httpx.AsyncClient() as client:
+        res = await client.post(
+            f'{tm_client.host_url}/api/jobs',
+            json={'operation': 'image_generation', 'prompt': req.prompt, 'params': params},
+            headers=headers
+        )
         res.raise_for_status()
         return res.json()
 

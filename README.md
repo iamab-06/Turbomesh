@@ -15,6 +15,7 @@ TurboMesh separates computation between a **Host** node (which handles heavy AI 
   - **Object Detection (YOLOv8)**: Real-time inference with bounding boxes, confidence scoring, vehicle/object counts, and image annotation.
   - **Deep Image Similarity**: Multi-modal image comparison combining deep embeddings (ResNet-18), Structural Similarity (SSIM), perceptual hashing (pHash/dHash), and ORB feature matching.
   - **Hand Sign & Landmark Recognition**: Automated dataset ingestion, MediaPipe 21-point 3D landmark extraction, classifier training (Random Forest / MLP), and real-time live webcam gesture classification.
+  - **AI Image Generation (Prompt-to-Image)**: GPU/CPU-accelerated text-to-image synthesis with semantic prompt understanding, artistic style presets (Cyberpunk, Space, Sunset, Nature, Oceanic, Synthwave, Fantasy, Cinematic, Monochrome), customizable resolutions, and seed variations.
 - **Live WebSocket Streaming**: Real-time progress updates, logs, and preview streaming between Host and User interfaces.
 - **Hardware Acceleration**: Automatic runtime detection and utilization of NVIDIA CUDA, Apple Silicon MPS, or fallback CPU.
 
@@ -137,6 +138,11 @@ python main.py --port 8001
 ### 3. Hand Sign Landmark Training & Live Inference
 - **Training**: Upload a ZIP archive containing labeled hand sign directories. The Host extracts 21 MediaPipe hand landmarks per frame, computes normalized coordinates, and trains a classifier with live progress streaming.
 - **Real-Time Webcam Inference**: Open the User Dashboard's camera tab to stream live frames through the trained hand sign model with real-time classification overlays.
+
+### 4. AI Image Generation (Prompt-to-Image)
+- **Prompt Input & Styling**: The client sends descriptive text prompts (e.g. *"A cyberpunk neon metropolis with flying cars and rain reflections"*), selecting optional style presets (Cyberpunk, Cosmic Space, Sunset, Nature, Oceanic, Synthwave, Fantasy, Cinematic, Monochrome), target resolutions, and seeds.
+- **Host GPU Synthesis**: The Host processes the request using its GPU-accelerated PyTorch neural latent art synthesizer, constructing spatial coordinate grids, Fourier frequency embeddings, atmospheric composition layers, and lighting bloom.
+- **Image Return & Metadata**: The Host generates `generated_image.png` and `generation_metadata.json`, which are returned to the User dashboard with high-resolution preview, download options, and quick variation regeneration.
 
 ---
 
